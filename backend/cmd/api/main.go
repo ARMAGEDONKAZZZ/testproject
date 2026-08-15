@@ -20,6 +20,7 @@ import (
 	"github.com/neuratop/backend/internal/platform/httpserver"
 	"github.com/neuratop/backend/internal/profile"
 	"github.com/neuratop/backend/internal/puzzle"
+	"github.com/neuratop/backend/internal/webui"
 )
 
 func main() {
@@ -61,6 +62,15 @@ func main() {
 
 	billingDeps := billing.NewDeps(pool)
 	billing.RegisterRoutes(api, authMiddleware, billingDeps)
+
+	// Only present when built with `-tags webui` (see internal/webui and
+	// Dockerfile's frontend build stage) — lets one Render service serve
+	// both the API and the SPA. Absent in local dev (`go run ./cmd/api`),
+	// which behaves exactly as before this existed.
+	if distFS, ok := webui.DistFS(); ok {
+		root.Handle("/*", httpserver.NewSPAHandler(distFS))
+		slog.Info("serving embedded frontend build")
+	}
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.HTTPPort,

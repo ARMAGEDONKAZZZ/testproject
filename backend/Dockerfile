@@ -1,19 +1,41 @@
 # syntax=docker/dockerfile:1
+#
+# Build context for this Dockerfile must be the MONOREPO ROOT (not
+# backend/), because it builds both frontend/ and backend/ and copies the
+# frontend build into the Go binary via go:embed — see
+# backend/internal/webui. On Render: Dockerfile Path = "backend/Dockerfile",
+# Docker Build Context Directory = "." (repo root).
 
-# --- build stage -------------------------------------------------------
+# --- frontend build stage -----------------------------------------------
+FROM node:20-alpine AS frontend-build
+
+WORKDIR /src/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
+# --- go build stage -------------------------------------------------------
 FROM golang:1.25-alpine AS build
 
 WORKDIR /src
 
 # Cache module downloads separately from source changes.
-COPY go.mod go.sum ./
+COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
-COPY . .
+COPY backend/ .
+# internal/webui's //go:embed directive (only active with -tags webui)
+# reads from this exact path at compile time.
+COPY --from=frontend-build /src/frontend/dist ./internal/webui/dist
 
 # CGO_ENABLED=0: pgx is pure Go, so a fully static binary works on any
 # base image (no libc dependency to match between build/runtime stages).
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
+# -tags webui: pulls in internal/webui/embed_prod.go, embedding the
+# frontend build into the binary — see that file for why this is opt-in
+# rather than the default (keeps `go run ./cmd/api` working for local dev
+# without a frontend build present).
+RUN CGO_ENABLED=0 GOOS=linux go build -tags webui -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate
 
 # --- runtime stage -------------------------------------------------------
