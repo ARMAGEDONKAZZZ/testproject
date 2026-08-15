@@ -8,6 +8,7 @@ const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const ForgotPasswordPage = lazy(() => import("@/pages/auth/ForgotPasswordPage"));
 
 const GeneratePage = lazy(() => import("@/pages/generate/GeneratePage"));
+const GenerationsPage = lazy(() => import("@/pages/generate/GenerationsPage"));
 const PuzzlePage = lazy(() => import("@/pages/puzzle/PuzzlePage"));
 const SelfEducationPage = lazy(() => import("@/pages/self-education/SelfEducationPage"));
 const SelfEducationHistoryPage = lazy(() => import("@/pages/self-education/SelfEducationHistoryPage"));
@@ -74,6 +75,7 @@ export function App() {
 
         {/* Authenticated app */}
         <Route path="/generate" element={<Authenticated><GeneratePage /></Authenticated>} />
+        <Route path="/generations" element={<Authenticated><GenerationsPage /></Authenticated>} />
         <Route path="/puzzle/:puzzleId" element={<Authenticated><PuzzlePage /></Authenticated>} />
         <Route path="/self-education" element={<Authenticated><SelfEducationPage /></Authenticated>} />
         <Route path="/self-education/history" element={<Authenticated><SelfEducationHistoryPage /></Authenticated>} />

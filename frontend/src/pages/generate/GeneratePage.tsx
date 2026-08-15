@@ -1,22 +1,25 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Pill } from "@/components/Pill";
 import { toast } from "@/components/Toast";
 import { ApiError } from "@/api/client";
-import { Plus, Minus, ArrowUp, ChevronDown, Grid, Carousel as CarouselIcon } from "@/components/icons";
+import { Plus, Minus, ArrowUp, ChevronDown, Grid, Carousel as CarouselIcon, X } from "@/components/icons";
 import { Mascot } from "@/components/Mascot";
 import { MiniBoard } from "@/components/MiniBoard";
 import { GenerateSidebar } from "@/components/GenerateSidebar";
 import { RecommendedCard } from "./components/RecommendedCard";
 import { PuzzleCarousel } from "./components/PuzzleCarousel";
+import { PuzzleActionBar } from "./components/PuzzleActionBar";
+import { AttachMenu } from "./components/AttachMenu";
 import {
   useCreateGeneration,
   useGeneration,
   useCancelGeneration,
   useRegeneratePuzzle,
+  useGenerateFromFEN,
   type Generation,
 } from "@/features/generation/hooks";
 
@@ -34,12 +37,23 @@ const QUICK_PICKS = [
   { label: "♞ Opening traps", tag: "opening-trap" },
 ];
 
+interface Attachment {
+  kind: "pgn" | "image";
+  label: string;
+  payload: string;
+  preview?: string;
+}
+
 export default function GeneratePage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const [text, setText] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [count, setCount] = useState(4);
-  const [generationId, setGenerationId] = useState<string | null>(null);
+  // Deep-link support: "My generations" links here as /generate?generationId=…
+  // to reopen a past request in the same polling/results view.
+  const [generationId, setGenerationId] = useState<string | null>(() => searchParams.get("generationId"));
   const [view, setView] = useState<"carousel" | "grid">("carousel");
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [recommendedCollapsed, setRecommendedCollapsed] = useState(false);
@@ -47,16 +61,17 @@ export default function GeneratePage() {
   const createGeneration = useCreateGeneration();
   const cancelGeneration = useCancelGeneration();
   const regenerate = useRegeneratePuzzle();
+  const generateFromFen = useGenerateFromFEN();
   const generation = useGeneration(generationId);
 
   async function handleSubmit() {
-    if (!text.trim() && !selectedTag) {
+    if (!text.trim() && !selectedTag && !attachment) {
       toast.error(t("generate.emptyContentError"));
       return;
     }
     try {
-      const inputMode = selectedTag ? "tag" : "text";
-      const payload = selectedTag ?? text.trim();
+      const inputMode = attachment ? attachment.kind === "pgn" ? "fen_pgn" : "image" : selectedTag ? "tag" : "text";
+      const payload = attachment ? attachment.payload : (selectedTag ?? text.trim());
       const res = await createGeneration.mutateAsync({ inputMode, payload, count });
       setGenerationId(res.generationId);
       setCarouselIndex(0);
@@ -65,14 +80,48 @@ export default function GeneratePage() {
     }
   }
 
+  function clearAttachment() {
+    setAttachment(null);
+    setSelectedTag(null);
+    setText("");
+  }
+
   function pickRecommended(label: string, tag: string) {
+    setAttachment(null);
     setText(label);
     setSelectedTag(tag);
   }
 
   function pickQuickTag(label: string, tag: string) {
+    setAttachment(null);
     setText(label);
     setSelectedTag(tag);
+  }
+
+  function attachPgn(pgn: string) {
+    setSelectedTag(null);
+    setText("");
+    setAttachment({ kind: "pgn", label: "PGN", payload: pgn });
+  }
+
+  function attachImage(file: File) {
+    setSelectedTag(null);
+    setText("");
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachment({ kind: "image", label: file.name, payload: file.name, preview: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function generateFromFenString(fen: string) {
+    try {
+      const res = await generateFromFen.mutateAsync({ fen, count: 1 });
+      setGenerationId(res.generationId);
+      setCarouselIndex(0);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t("generate.genericError"));
+    }
   }
 
   const isGenerating = generation?.status === "pending";
@@ -184,8 +233,14 @@ export default function GeneratePage() {
             />
           ) : (
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              {puzzles.map((p) => (
-                <PuzzleCard key={p.id} puzzle={p} />
+              {puzzles.map((p, i) => (
+                <PuzzleCard
+                  key={p.id}
+                  puzzle={p}
+                  index={i}
+                  total={puzzles.length}
+                  onRegenerate={() => void regenerate.mutateAsync(p.id)}
+                />
               ))}
             </div>
           )}
@@ -195,15 +250,62 @@ export default function GeneratePage() {
       <Card>
         <div className="flex items-center gap-2">
           <div className="flex flex-1 items-center gap-2 rounded-xl border border-border-subtle bg-bg-tertiary px-3 py-2">
+            <AttachMenu
+              onAttachPgn={attachPgn}
+              onAttachImage={attachImage}
+              onGenerateFromFen={(fen) => void generateFromFenString(fen)}
+              fenLoading={generateFromFen.isPending}
+            />
+
+            {attachment?.kind === "image" && (
+              <span className="relative shrink-0">
+                <img src={attachment.preview} alt={attachment.label} className="h-8 w-8 rounded-lg object-cover" />
+                <button
+                  type="button"
+                  onClick={clearAttachment}
+                  aria-label={t("generate.removeAttachment")}
+                  className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-bg-primary text-text-primary"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+
+            {attachment?.kind === "pgn" && (
+              <span className="flex shrink-0 items-center gap-1.5 rounded-lg bg-bg-elevated px-2 py-1 text-xs text-text-secondary">
+                PGN
+                <button
+                  type="button"
+                  onClick={clearAttachment}
+                  aria-label={t("generate.removeAttachment")}
+                  className="rounded-full text-text-muted hover:text-text-primary"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+
             <input
               className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
               placeholder={t("generate.placeholder")}
               value={text}
+              disabled={!!attachment}
               onChange={(e) => {
                 setText(e.target.value);
                 setSelectedTag(null);
               }}
             />
+
+            {selectedTag && !attachment && (
+              <button
+                type="button"
+                onClick={clearAttachment}
+                aria-label={t("generate.removeAttachment")}
+                className="shrink-0 text-text-muted hover:text-text-primary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-1 rounded-xl border border-border-subtle bg-bg-tertiary px-2 py-2">
             <button
@@ -253,15 +355,38 @@ export default function GeneratePage() {
   );
 }
 
-function PuzzleCard({ puzzle }: { puzzle: Generation["puzzles"][number] }) {
+function PuzzleCard({
+  puzzle,
+  index,
+  total,
+  onRegenerate,
+}: {
+  puzzle: Generation["puzzles"][number];
+  index: number;
+  total: number;
+  onRegenerate: () => void;
+}) {
   const { t } = useTranslation();
+  const sideLabel = puzzle.sideToMove === "white" ? "Ходят Белые" : "Ходят Чёрные";
   return (
-    <Link to={`/puzzle/${puzzle.id}`} className="block rounded-xl border border-border-subtle p-3 hover:border-accent-violet">
-      <MiniBoard fen={puzzle.fen} />
-      <div className="mt-2 flex items-center justify-between text-xs text-text-secondary">
-        <Pill tone="violet">{puzzle.tag}</Pill>
-        <span>{puzzle.sideToMove === "white" ? t("puzzle.whiteToMove") : t("puzzle.blackToMove")}</span>
-      </div>
-    </Link>
+    <div className="group relative rounded-xl border border-border-subtle p-3 hover:border-accent-violet">
+      <Link to={`/puzzle/${puzzle.id}`} className="block">
+        <div className="relative">
+          <MiniBoard fen={puzzle.fen} />
+          <div className="absolute inset-x-0 bottom-0 flex justify-center pb-2 opacity-0 transition-opacity group-hover:opacity-100">
+            <div onClick={(e) => e.preventDefault()}>
+              <PuzzleActionBar puzzle={puzzle} onRegenerate={onRegenerate} size="sm" />
+            </div>
+          </div>
+        </div>
+        <div className="mt-2 flex items-center justify-between text-xs text-text-secondary">
+          <Pill tone="violet">{puzzle.tag}</Pill>
+          <span>{puzzle.sideToMove === "white" ? t("puzzle.whiteToMove") : t("puzzle.blackToMove")}</span>
+        </div>
+        <p className="mt-1 text-[11px] text-text-muted">
+          {index + 1}/{total} · {puzzle.tag} · {sideLabel}
+        </p>
+      </Link>
+    </div>
   );
 }

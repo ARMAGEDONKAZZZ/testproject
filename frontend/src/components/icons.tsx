@@ -46,4 +46,7 @@ export {
   LayoutGrid as Grid,
   GalleryHorizontal as Carousel,
   Play,
+  FileText,
+  Hash,
+  Paperclip,
 } from "lucide-react";

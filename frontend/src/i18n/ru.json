@@ -69,6 +69,9 @@
     "uploadImage": "Загрузить изображение",
     "fenDialogTitle": "FEN позиция",
     "fenPastePlaceholder": "Вставьте строку FEN — Forsyth–Edwards Notation",
+    "pgnDialogTitle": "Вставить PGN",
+    "pgnPastePlaceholder": "Вставьте партию в формате PGN",
+    "removeAttachment": "Убрать вложение",
     "apply": "Применить"
   },
   "puzzle": {

@@ -82,10 +82,24 @@ export function useCancelGeneration() {
   });
 }
 
+// Shape of a row in the GET /generations list — distinct from `Generation`
+// above (the flattened detail view with `puzzles`): the list endpoint never
+// nests puzzles, see internal/generation/handlers_extra.go ListGenerations.
+export interface GenerationSummary {
+  id: string;
+  inputMode: Generation["inputMode"];
+  inputPayload: string;
+  requestedCount: number;
+  status: Generation["status"];
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export function useGenerationHistory(page = 1, pageSize = 20) {
   return useQuery({
     queryKey: ["generations", page, pageSize],
-    queryFn: () => api.get<Generation[]>(`/generations?page=${page}&pageSize=${pageSize}`),
+    queryFn: () => api.get<GenerationSummary[]>(`/generations?page=${page}&pageSize=${pageSize}`),
   });
 }
 
