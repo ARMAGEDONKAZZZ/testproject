@@ -6,11 +6,12 @@ import { Card } from "@/components/Card";
 import { Pill } from "@/components/Pill";
 import { toast } from "@/components/Toast";
 import { ApiError } from "@/api/client";
-import { Plus, Minus, ArrowUp, Heart, Download, Eye, Regenerate as RegenIcon, ChevronDown } from "@/components/icons";
+import { Plus, Minus, ArrowUp, ChevronDown, Grid, Carousel as CarouselIcon } from "@/components/icons";
 import { Mascot } from "@/components/Mascot";
 import { MiniBoard } from "@/components/MiniBoard";
 import { GenerateSidebar } from "@/components/GenerateSidebar";
 import { RecommendedCard } from "./components/RecommendedCard";
+import { PuzzleCarousel } from "./components/PuzzleCarousel";
 import {
   useCreateGeneration,
   useGeneration,
@@ -18,7 +19,6 @@ import {
   useRegeneratePuzzle,
   type Generation,
 } from "@/features/generation/hooks";
-import { useToggleFavorite, exportPuzzleUrl } from "@/features/puzzle/hooks";
 
 const RECOMMENDED = [
   { label: "Мат в 2 хода", tag: "mate-in-1" },
@@ -148,30 +148,39 @@ export default function GeneratePage() {
 
       {puzzles.length > 0 && (
         <Card className="mb-6">
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm text-text-secondary">
-              {carouselIndex + 1} / {puzzles.length}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant={view === "carousel" ? "primary" : "secondary"}
-                onClick={() => setView("carousel")}
-              >
-                Список
-              </Button>
-              <Button size="sm" variant={view === "grid" ? "primary" : "secondary"} onClick={() => setView("grid")}>
-                Сетка
-              </Button>
-            </div>
+          <div className="mb-4 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setView("carousel")}
+              aria-label="Вид: карусель"
+              className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+                view === "carousel"
+                  ? "border-accent-green text-accent-green"
+                  : "border-border-subtle text-text-muted hover:text-text-secondary"
+              }`}
+            >
+              <CarouselIcon className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("grid")}
+              aria-label="Вид: сетка"
+              className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+                view === "grid"
+                  ? "border-accent-green text-accent-green"
+                  : "border-border-subtle text-text-muted hover:text-text-secondary"
+              }`}
+            >
+              <Grid className="h-4 w-4" />
+            </button>
           </div>
 
           {view === "carousel" ? (
-            <PuzzleDetail
-              puzzle={puzzles[carouselIndex]}
-              onPrev={() => setCarouselIndex((i) => Math.max(0, i - 1))}
-              onNext={() => setCarouselIndex((i) => Math.min(puzzles.length - 1, i + 1))}
-              onRegenerate={() => void regenerate.mutateAsync(puzzles[carouselIndex].id)}
+            <PuzzleCarousel
+              puzzles={puzzles}
+              index={carouselIndex}
+              onIndexChange={setCarouselIndex}
+              onRegenerate={(puzzleId) => void regenerate.mutateAsync(puzzleId)}
             />
           ) : (
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -244,71 +253,7 @@ export default function GeneratePage() {
   );
 }
 
-interface PuzzleView {
-  id: string;
-  fen: string;
-  sideToMove: "white" | "black";
-  objective: string;
-  tag: string;
-  description: string;
-}
-
-function PuzzleDetail({
-  puzzle,
-  onPrev,
-  onNext,
-  onRegenerate,
-}: {
-  puzzle: Generation["puzzles"][number];
-  onPrev: () => void;
-  onNext: () => void;
-  onRegenerate: () => void;
-}) {
-  const { t } = useTranslation();
-  const toggleFavorite = useToggleFavorite(puzzle.id);
-  return (
-    <div className="flex flex-col items-center">
-      <div className="mb-3 flex items-center gap-2">
-        <Pill tone="violet">{puzzle.tag}</Pill>
-        <span className="text-sm text-text-secondary">
-          {puzzle.sideToMove === "white" ? t("puzzle.whiteToMove") : t("puzzle.blackToMove")}
-        </span>
-      </div>
-      <div className="flex w-full items-center gap-4">
-        <button onClick={onPrev} className="text-text-muted hover:text-text-primary">
-          ‹
-        </button>
-        <div className="w-72 max-w-full">
-          <MiniBoard fen={puzzle.fen} />
-        </div>
-        <button onClick={onNext} className="text-text-muted hover:text-text-primary">
-          ›
-        </button>
-      </div>
-      <p className="mt-4 max-w-md text-center text-sm text-text-secondary">{puzzle.description}</p>
-      <div className="mt-4 flex gap-3">
-        <Link to={`/puzzle/${puzzle.id}`}>
-          <Button size="sm" variant="secondary">
-            <Eye className="h-4 w-4" /> {t("puzzle.playVsAi") ? "Играть" : "Играть"}
-          </Button>
-        </Link>
-        <Button size="sm" variant="secondary" onClick={onRegenerate}>
-          <RegenIcon className="h-4 w-4" />
-        </Button>
-        <a href={exportPuzzleUrl(puzzle.id, "fen")} download>
-          <Button size="sm" variant="secondary">
-            <Download className="h-4 w-4" />
-          </Button>
-        </a>
-        <Button size="sm" variant="secondary" onClick={() => toggleFavorite.mutate(true)}>
-          <Heart className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function PuzzleCard({ puzzle }: { puzzle: PuzzleView }) {
+function PuzzleCard({ puzzle }: { puzzle: Generation["puzzles"][number] }) {
   const { t } = useTranslation();
   return (
     <Link to={`/puzzle/${puzzle.id}`} className="block rounded-xl border border-border-subtle p-3 hover:border-accent-violet">

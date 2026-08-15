@@ -43,4 +43,7 @@ export {
   FileDown,
   Image as ImageIcon,
   Send,
+  LayoutGrid as Grid,
+  GalleryHorizontal as Carousel,
+  Play,
 } from "lucide-react";
