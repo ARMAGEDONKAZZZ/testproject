@@ -81,20 +81,23 @@ func (h *Handlers) RegisterCode(w http.ResponseWriter, r *http.Request) {
 type registerVerifyRequest struct {
 	RegistrationID uuid.UUID `json:"registrationId" validate:"required"`
 	Code           string    `json:"code" validate:"required,len=6"`
-	Password       string    `json:"password" validate:"omitempty,min=8"`
 }
 
+// RegisterVerify completes the email/OTP registration leg. There is no
+// client-supplied password here — for an adult account, the verified code
+// itself becomes the account password (see Service.VerifyRegistration), so
+// there is nothing else for the client to submit or get wrong.
 func (h *Handlers) RegisterVerify(w http.ResponseWriter, r *http.Request) {
 	var req registerVerifyRequest
 	if !httpserver.DecodeJSON(w, r, &req) {
 		return
 	}
 	if err := validate.Struct(req); err != nil {
-		httpserver.WriteValidationError(w, "Проверьте код и пароль", nil)
+		httpserver.WriteValidationError(w, "Проверьте код", nil)
 		return
 	}
 	user, access, refresh, err := h.service.VerifyRegistration(r.Context(), VerifyRegistrationInput{
-		UserID: req.RegistrationID, Code: req.Code, Password: req.Password,
+		UserID: req.RegistrationID, Code: req.Code,
 	})
 	if errors.Is(err, ErrWrongCode) {
 		httpserver.WriteValidationError(w, "Неверный или истёкший код", nil)

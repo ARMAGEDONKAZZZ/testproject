@@ -35,6 +35,7 @@
     "passwordLabel": "PASSWORD",
     "getCode": "Get code",
     "codeSentBanner": "A code was sent to your e-mail",
+    "codeIsPasswordHint": "This code is also your password — save it, you'll need it to log in",
     "alreadyHaveAccount": "Already have an account?",
     "noAccount": "No account?",
     "login": "Log in",

@@ -132,18 +132,21 @@ func (s *Service) SendRegistrationCode(ctx context.Context, userID uuid.UUID) er
 }
 
 type VerifyRegistrationInput struct {
-	UserID   uuid.UUID
-	Code     string
-	Password string
+	UserID uuid.UUID
+	Code   string
 }
 
-// VerifyRegistration checks the OTP and, if provided, sets the account
-// password (the email/password path from auth.md screens 5–8). It also
-// issues a first token pair: the account exists from here on (even though
-// its nickname is still a temporary placeholder), and the next step
-// (CompleteNickname) is itself an authenticated endpoint — without a token
-// here, the client would have no way to call it. This is a deliberate fix
-// over the naive design, caught by end-to-end testing.
+// VerifyRegistration checks the OTP (the email/password path from auth.md
+// screens 5–8). For an adult account, the verified code doubles as the
+// account password — there is no separate client-supplied password to set
+// or to mismatch against the code: the server derives the password hash
+// from in.Code itself once the code has actually been verified, the same
+// way age_tier is always server-derived rather than trusted from the
+// client. It also issues a first token pair: the account exists from here
+// on (even though its nickname is still a temporary placeholder), and the
+// next step (CompleteNickname) is itself an authenticated endpoint —
+// without a token here, the client would have no way to call it. This is a
+// deliberate fix over the naive design, caught by end-to-end testing.
 func (s *Service) VerifyRegistration(ctx context.Context, in VerifyRegistrationInput) (User, string, string, error) {
 	email, err := s.registrationContactEmail(ctx, in.UserID)
 	if err != nil {
@@ -152,18 +155,18 @@ func (s *Service) VerifyRegistration(ctx context.Context, in VerifyRegistrationI
 	if err := s.consumeCode(ctx, email, "registration", in.Code); err != nil {
 		return User{}, "", "", err
 	}
-	if in.Password != "" {
-		hash, err := bcrypt.GenerateFromPassword([]byte(in.Password), bcrypt.DefaultCost)
+	user, err := s.repo.GetUserByID(ctx, in.UserID)
+	if err != nil {
+		return User{}, "", "", err
+	}
+	if user.AgeTier == "adult" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(in.Code), bcrypt.DefaultCost)
 		if err != nil {
 			return User{}, "", "", err
 		}
 		if err := s.repo.SetPasswordHash(ctx, in.UserID, string(hash)); err != nil {
 			return User{}, "", "", err
 		}
-	}
-	user, err := s.repo.GetUserByID(ctx, in.UserID)
-	if err != nil {
-		return User{}, "", "", err
 	}
 	access, refresh, err := s.issueTokens(ctx, user)
 	return user, access, refresh, err

@@ -27,7 +27,10 @@ export function useRegisterCode() {
 export function useRegisterVerify() {
   const setTokens = useSessionStore((s) => s.setTokens);
   return useMutation({
-    mutationFn: (input: { registrationId: string; code: string; password?: string }) =>
+    // No password field: for an adult account, the verified code doubles
+    // as the account password (set server-side) — see
+    // internal/auth/service.go VerifyRegistration.
+    mutationFn: (input: { registrationId: string; code: string }) =>
       api.post<{ userId: string; nickname: string } & TokenPair>("/auth/register/verify", input, {
         skipAuth: true,
       }),

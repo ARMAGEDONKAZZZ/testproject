@@ -29,7 +29,7 @@ Standard `code` values used across endpoints: `VALIDATION_ERROR` (400),
 |---|---|---|---|---|---|
 | POST | `/auth/register/start` | Public | `{ age, ageTier, email?, parent?: { name, email } }` | `201 { data: { registrationId } }` | `ageTier` is recomputed server-side from `age`, client value ignored (FR-001–003). `parent` required and validated when computed tier ≠ adult. |
 | POST | `/auth/register/code` | Public | `{ registrationId, email }` | `202 {}` | Sends OTP; rate-limited (FR-009). |
-| POST | `/auth/register/verify` | Public | `{ registrationId, code, password? }` | `200 { data: { accessToken, refreshToken } }` | Completes email/password leg. |
+| POST | `/auth/register/verify` | Public | `{ registrationId, code }` | `200 { data: { accessToken, refreshToken } }` | Completes email/password leg. No client-supplied password: for an adult account the verified OTP itself becomes the account password (server-derived, bcrypt-hashed) — login later uses that same code as `password`. |
 | POST | `/auth/register/oauth/:provider` | Public | `{ oauthCode }` | `200 { data: { accessToken, refreshToken } }` | `provider` ∈ `google\|apple`. |
 | POST | `/auth/register/nickname` | Bearer (pre-final) | `{ nickname }` | `200 { data: { user } }` | FR-005. |
 | POST | `/auth/login` | Public | `{ email, password }` | `200 { data: { accessToken, refreshToken } }` \| `401 WRONG_PASSWORD` | Rate-limited per account+IP (FR-007). |

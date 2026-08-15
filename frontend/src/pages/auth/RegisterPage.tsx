@@ -37,7 +37,6 @@ export default function RegisterPage() {
   const [parentEmail, setParentEmail] = useState("");
   const [consentChecked, setConsentChecked] = useState(false);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [codeSent, setCodeSent] = useState(false);
@@ -101,11 +100,7 @@ export default function RegisterPage() {
   async function handleVerify() {
     if (!registrationId || !code) return;
     try {
-      await registerVerify.mutateAsync({
-        registrationId,
-        code,
-        password: ageTier === "adult" ? password : undefined,
-      });
+      await registerVerify.mutateAsync({ registrationId, code });
       setStep("nickname");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Неверный или истёкший код");
@@ -204,6 +199,8 @@ export default function RegisterPage() {
 
       {step === "code" && (
         <div className="mt-6 space-y-4">
+          {email && <Input label={t("auth.emailLabel")} value={email} readOnly disabled />}
+
           {codeSent && (
             <div className="rounded-xl bg-bg-elevated px-4 py-2 text-center text-sm text-text-secondary">
               {t("auth.codeSentBanner")}
@@ -221,14 +218,7 @@ export default function RegisterPage() {
               {t("auth.getCode")}
             </Button>
           </div>
-          {ageTier === "adult" && (
-            <Input
-              label={t("auth.passwordLabel")}
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          )}
+          {ageTier === "adult" && <p className="text-xs text-text-muted">{t("auth.codeIsPasswordHint")}</p>}
           <Button className="w-full" loading={registerVerify.isPending} onClick={() => void handleVerify()}>
             {t("auth.register")}
           </Button>
