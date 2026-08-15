@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens transcribed from docs/design-audit/*.md (all six Figma
+ * audits). This is the single source of truth for color — components MUST
+ * reference these tokens (via Tailwind classes like bg-bg-primary,
+ * text-accent-green) rather than hard-coding hex values, so the whole app
+ * stays visually consistent with the audited design (Constitution:
+ * Maintainability & UX Consistency).
+ */
+@theme {
+  --color-bg-primary: #0b0d17;
+  --color-bg-secondary: #0e111f;
+  --color-bg-tertiary: #15192a;
+  --color-bg-elevated: #22293f;
+  --color-bg-elevated-hover: #34364c;
+  --color-border-subtle: #2e334e;
+
+  --color-text-primary: #f4f7fa;
+  --color-text-secondary: #b7c0d8;
+  --color-text-muted: #636e80;
+
+  --color-accent-green: #0aff89;
+  --color-accent-green-alt: #00ed8e;
+  --color-accent-teal: #43ffc6;
+  --color-accent-cyan: #30ede3;
+
+  --color-accent-violet: #7b61ff;
+  --color-accent-violet-deep: #4c0bbc;
+  --color-accent-violet-light: #9490ff;
+
+  --color-accent-pink: #e0879c;
+
+  --color-danger: #ff5053;
+  --color-danger-light: #f87171;
+
+  --color-board-light: #efd9b8;
+  --color-board-dark: #b38867;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+/* Consistent, visible focus ring everywhere (Constitution VII: accessibility). */
+:focus-visible {
+  outline: 2px solid var(--color-accent-green);
+  outline-offset: 2px;
+}
