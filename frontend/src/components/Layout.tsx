@@ -3,7 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import clsx from "clsx";
-import { ChevronDown, LogOut, Settings, Globe } from "@/components/icons";
+import { ChevronDown, LogOut, Settings, Globe, Grid } from "@/components/icons";
 import { NeuratopMark } from "@/components/Logo";
 import { useSessionStore } from "@/features/auth/session";
 import { useMe } from "@/features/profile/hooks";
@@ -43,7 +43,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary">
-      <header className="flex items-center justify-between border-b border-border-subtle px-6 py-3">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border-subtle bg-bg-primary px-6 py-3">
         <div className="flex items-center gap-8">
           <NavLink to="/generate" className="flex items-center gap-2">
             <NeuratopMark className="h-6 w-6" />
@@ -145,6 +145,14 @@ export function Layout({ children }: { children: ReactNode }) {
                     className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-primary outline-none hover:bg-bg-elevated-hover"
                   >
                     <Settings className="h-4 w-4" /> Account settings
+                  </NavLink>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item asChild>
+                  <NavLink
+                    to="/profile/board-design"
+                    className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-primary outline-none hover:bg-bg-elevated-hover"
+                  >
+                    <Grid className="h-4 w-4" /> Board design
                   </NavLink>
                 </DropdownMenu.Item>
                 <DropdownMenu.Item

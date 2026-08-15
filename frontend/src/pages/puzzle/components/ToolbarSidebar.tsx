@@ -22,6 +22,7 @@ interface ToolbarSidebarProps {
   onTimer: () => void;
   onFlip: () => void;
   onRegenerate: () => void;
+  regenerating?: boolean;
   onAddToFolder: () => void;
   onPlayVsAi: () => void;
   onHint: () => void;
@@ -30,20 +31,23 @@ interface ToolbarSidebarProps {
 function ToolButton({
   onClick,
   active,
+  disabled,
   label,
   children,
 }: {
   onClick: () => void;
   active?: boolean;
+  disabled?: boolean;
   label: string;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       title={label}
       aria-label={label}
-      className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+      className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
         active ? "bg-accent-green/20 text-accent-green" : "bg-bg-elevated text-text-secondary hover:text-text-primary"
       }`}
     >
@@ -79,8 +83,8 @@ export function ToolbarSidebar(props: ToolbarSidebarProps) {
       <ToolButton onClick={props.onFlip} label="Перевернуть доску">
         <Flip className="h-4 w-4" />
       </ToolButton>
-      <ToolButton onClick={props.onRegenerate} label="Перегенерировать">
-        <Regenerate className="h-4 w-4" />
+      <ToolButton onClick={props.onRegenerate} disabled={props.regenerating} label="Перегенерировать">
+        <Regenerate className={`h-4 w-4 ${props.regenerating ? "animate-spin" : ""}`} />
       </ToolButton>
       <ToolButton onClick={props.onAddToFolder} label="Добавить в папку">
         <FolderPlus className="h-4 w-4" />

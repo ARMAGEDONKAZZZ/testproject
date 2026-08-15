@@ -109,7 +109,6 @@
     "addToFolderFailed": "Couldn't add to folder",
     "add": "Add",
     "solutionLabel": "Solution",
-    "regeneratePromptOnGenerate": "You can regenerate from the generation page",
     "playVsAiComingSoon": "Play vs AI is coming soon"
   },
   "folders": {

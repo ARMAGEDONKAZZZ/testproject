@@ -11,12 +11,14 @@ import { toast } from "@/components/Toast";
 import { ApiError, api } from "@/api/client";
 import { ChessBoardView } from "./components/ChessBoardView";
 import { ToolbarSidebar } from "./components/ToolbarSidebar";
+import { BoardThemePicker } from "./components/BoardThemePicker";
 import { HintPaywallModal } from "./components/HintPaywallModal";
 import { LessonsPanel } from "./components/LessonsPanel";
 import { TimerModal } from "./components/TimerModal";
 import { ShareModal } from "./components/ShareModal";
 import { materialBalance } from "./utils/material";
 import { trainingIntroMessage } from "./utils/trainingMessages";
+import { playTimerBeep } from "./utils/beep";
 import {
   usePuzzle,
   useStartAttempt,
@@ -29,6 +31,7 @@ import {
 } from "@/features/puzzle/hooks";
 import { useFolders, useAddToFolders } from "@/features/folders/hooks";
 import { useMe } from "@/features/profile/hooks";
+import { useRegeneratePuzzle, useGeneration } from "@/features/generation/hooks";
 
 type MoveOutcome = "idle" | "correct" | "incorrect";
 
@@ -57,9 +60,12 @@ export default function PuzzlePage() {
   const [timerModalOpen, setTimerModalOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [timerSoundOn, setTimerSoundOn] = useState(true);
   const [favorite, setFavorite] = useState(false);
   const [mascotBubble, setMascotBubble] = useState<string | null>(null);
   const [originalPuzzleId, setOriginalPuzzleId] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenGenerationId, setRegenGenerationId] = useState<string | null>(null);
 
   const submitMove = useSubmitMove(attemptId ?? "");
   const simplify = useSimplify(attemptId ?? "");
@@ -67,6 +73,8 @@ export default function PuzzlePage() {
   const revealSolution = useRevealSolution(attemptId ?? "");
   const toggleFavorite = useToggleFavorite(currentPuzzleId);
   const { data: analysis } = useAnalysis(analysisOpen ? attemptId : null);
+  const regeneratePuzzle = useRegeneratePuzzle();
+  const regenGeneration = useGeneration(regenGenerationId);
 
   useEffect(() => {
     if (!puzzleId) return;
@@ -105,11 +113,34 @@ export default function PuzzlePage() {
   useEffect(() => {
     if (remainingSeconds === null || remainingSeconds <= 0) return;
     const id = setInterval(() => {
-      setRemainingSeconds((s) => (s !== null && s > 0 ? s - 1 : s));
+      setRemainingSeconds((s) => {
+        if (s === null || s <= 0) return s;
+        if (s === 1 && timerSoundOn) playTimerBeep();
+        return s - 1;
+      });
     }, 1000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingSeconds === null]);
+
+  useEffect(() => {
+    if (!regenGenerationId || !regenGeneration) return;
+    if (regenGeneration.status === "succeeded") {
+      const newPuzzle = regenGeneration.puzzles[0];
+      setRegenerating(false);
+      setRegenGenerationId(null);
+      if (newPuzzle) {
+        navigate(`/puzzle/${newPuzzle.id}`);
+      } else {
+        toast.error(t("generate.genericError"));
+      }
+    } else if (regenGeneration.status === "failed") {
+      setRegenerating(false);
+      setRegenGenerationId(null);
+      toast.error(regenGeneration.errorMessage ?? t("generate.genericError"));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regenGeneration?.status]);
 
   async function handleMove(san: string) {
     if (!attemptId) return;
@@ -174,6 +205,17 @@ export default function PuzzlePage() {
     }
   }
 
+  async function handleRegenerate() {
+    setRegenerating(true);
+    try {
+      const res = await regeneratePuzzle.mutateAsync(currentPuzzleId);
+      setRegenGenerationId(res.generationId);
+    } catch {
+      setRegenerating(false);
+      toast.error(t("generate.genericError"));
+    }
+  }
+
   if (isLoading || !puzzle || !currentFen) {
     return <div className="p-10 text-center text-text-secondary">{t("common.loading")}</div>;
   }
@@ -194,6 +236,7 @@ export default function PuzzlePage() {
           <span className="rounded-full border border-border-subtle px-3 py-1 text-xs text-text-secondary">
             {puzzle.sideToMove === "white" ? "White to move" : "Black to move"}
           </span>
+          <BoardThemePicker />
         </div>
       </div>
 
@@ -211,7 +254,8 @@ export default function PuzzlePage() {
           onShare={() => setShareModalOpen(true)}
           onTimer={() => setTimerModalOpen(true)}
           onFlip={() => setOrientation((o) => (o === "white" ? "black" : "white"))}
-          onRegenerate={() => toast.show(t("puzzle.regeneratePromptOnGenerate"))}
+          onRegenerate={() => void handleRegenerate()}
+          regenerating={regenerating}
           onAddToFolder={() => setFolderPickerOpen(true)}
           onPlayVsAi={() => toast.show(t("puzzle.playVsAiComingSoon"))}
           onHint={() => void handleHint()}
@@ -240,12 +284,15 @@ export default function PuzzlePage() {
                   : undefined
             }
           >
-            <ChessBoardView
-              fen={currentFen}
-              orientation={orientation}
-              interactive={outcome === "idle"}
-              onMove={(san) => void handleMove(san)}
-            />
+            <div className="relative">
+              <ChessBoardView
+                fen={currentFen}
+                orientation={orientation}
+                interactive={outcome === "idle" && !regenerating}
+                onMove={(san) => void handleMove(san)}
+              />
+              {regenerating && <RegenerateOverlay />}
+            </div>
 
             {outcome === "correct" && (
               <div className="mt-4 rounded-xl bg-accent-green/10 p-3 text-center text-accent-green">
@@ -354,7 +401,10 @@ export default function PuzzlePage() {
       <TimerModal
         open={timerModalOpen}
         onOpenChange={setTimerModalOpen}
-        onApply={(seconds) => setRemainingSeconds(seconds)}
+        onApply={(seconds, soundEnabled) => {
+          setRemainingSeconds(seconds);
+          setTimerSoundOn(soundEnabled);
+        }}
       />
 
       <ShareModal
@@ -368,6 +418,30 @@ export default function PuzzlePage() {
         onOpenChange={setFolderPickerOpen}
         puzzleId={currentPuzzleId}
       />
+    </div>
+  );
+}
+
+/**
+ * Multi-step loader shown over the board while regenerating in place —
+ * mirrors GeneratePage's isGenerating card and
+ * docs/design-audit/toolboard.md section 8 ("Regenerate"): desaturated
+ * board, progress bar, 3 checkpoint labels.
+ */
+function RegenerateOverlay() {
+  const { t } = useTranslation();
+  return (
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-2xl bg-bg-primary/85 backdrop-blur-sm">
+      <Mascot className="h-12 w-12 animate-bounce" />
+      <p className="text-sm font-medium text-accent-green">{t("generate.generating")}</p>
+      <div className="h-1.5 w-2/3 overflow-hidden rounded-full bg-bg-elevated">
+        <div className="h-full w-2/3 animate-pulse bg-accent-green" />
+      </div>
+      <div className="flex gap-3 text-xs text-text-muted">
+        <span>✓ {t("generate.stepFetching")}</span>
+        <span>✓ {t("generate.stepCalibrating")}</span>
+        <span>{t("generate.stepGenerating")}</span>
+      </div>
     </div>
   );
 }

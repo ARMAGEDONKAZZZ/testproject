@@ -49,4 +49,10 @@ export {
   FileText,
   Hash,
   Paperclip,
+  Palette,
+  User,
+  Users,
+  CreditCard,
+  Mail,
+  Bell,
 } from "lucide-react";

@@ -109,7 +109,6 @@
     "addToFolderFailed": "Не удалось добавить в папку",
     "add": "Добавить",
     "solutionLabel": "Решение",
-    "regeneratePromptOnGenerate": "Перегенерировать можно со страницы генерации",
     "playVsAiComingSoon": "Игра против ИИ скоро появится"
   },
   "folders": {

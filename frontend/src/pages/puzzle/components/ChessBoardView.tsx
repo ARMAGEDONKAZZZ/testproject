@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
+import { useBoardPreferences, boardColorsFor, animationDurationFor } from "@/features/profile/boardTheme";
 
 interface ChessBoardViewProps {
   fen: string;
@@ -17,6 +18,8 @@ interface ChessBoardViewProps {
  */
 export function ChessBoardView({ fen, orientation, interactive, onMove }: ChessBoardViewProps) {
   const game = useMemo(() => new Chess(fen), [fen]);
+  const prefs = useBoardPreferences();
+  const colors = boardColorsFor(prefs.theme);
 
   return (
     <div className="mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-border-subtle">
@@ -25,8 +28,10 @@ export function ChessBoardView({ fen, orientation, interactive, onMove }: ChessB
           position: fen,
           boardOrientation: orientation,
           allowDragging: interactive,
-          darkSquareStyle: { backgroundColor: "#B38867" },
-          lightSquareStyle: { backgroundColor: "#EFD9B8" },
+          darkSquareStyle: { backgroundColor: colors.dark },
+          lightSquareStyle: { backgroundColor: colors.light },
+          showNotation: prefs.showCoordinates,
+          animationDurationInMs: animationDurationFor(prefs.animationSpeedPct),
           onPieceDrop: ({ sourceSquare, targetSquare }) => {
             if (!targetSquare) return false;
             try {

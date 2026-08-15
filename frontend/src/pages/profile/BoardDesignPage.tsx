@@ -4,6 +4,8 @@ import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Card } from "@/components/Card";
 import { useMe, useSetBoardPreferences } from "@/features/profile/hooks";
+import { boardColorsFor, animationDurationFor } from "@/features/profile/boardTheme";
+import { ProfileSidebar } from "./components/ProfileSidebar";
 
 const THEMES = [
   { id: "default", label: "Default", color: "#7B61FF" },
@@ -46,7 +48,8 @@ export default function BoardDesignPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 px-6 py-10">
+    <ProfileSidebar>
+      <div className="space-y-4">
       <h1 className="text-2xl font-bold text-text-primary">{t("profile.boardDesign")}</h1>
 
       <Card>
@@ -56,8 +59,10 @@ export default function BoardDesignPage() {
             options={{
               position: new Chess().fen(),
               allowDragging: false,
-              darkSquareStyle: { backgroundColor: "#B38867" },
-              lightSquareStyle: { backgroundColor: "#EFD9B8" },
+              darkSquareStyle: { backgroundColor: boardColorsFor(theme).dark },
+              lightSquareStyle: { backgroundColor: boardColorsFor(theme).light },
+              showNotation: showCoordinates,
+              animationDurationInMs: animationDurationFor(animationSpeed),
             }}
           />
         </div>
@@ -133,6 +138,7 @@ export default function BoardDesignPage() {
           />
         </div>
       </Card>
-    </div>
+      </div>
+    </ProfileSidebar>
   );
 }

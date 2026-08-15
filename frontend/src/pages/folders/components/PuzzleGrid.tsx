@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Chessboard } from "react-chessboard";
 import { Heart, FolderPlus } from "@/components/icons";
 import { Pill } from "@/components/Pill";
+import { MiniBoard } from "@/components/MiniBoard";
 import { useToggleFavorite } from "@/features/puzzle/hooks";
 import type { PuzzleView } from "@/features/generation/hooks";
 
@@ -36,16 +36,7 @@ function PuzzleGridCard({
   return (
     <div className="rounded-xl border border-border-subtle p-3">
       <Link to={`/puzzle/${puzzle.id}`}>
-        <div className="aspect-square overflow-hidden rounded-lg">
-          <Chessboard
-            options={{
-              position: puzzle.fen,
-              allowDragging: false,
-              darkSquareStyle: { backgroundColor: "#B38867" },
-              lightSquareStyle: { backgroundColor: "#EFD9B8" },
-            }}
-          />
-        </div>
+        <MiniBoard fen={puzzle.fen} />
       </Link>
       <div className="mt-2 flex items-center justify-between text-xs text-text-secondary">
         <Pill tone="violet">{puzzle.tag}</Pill>

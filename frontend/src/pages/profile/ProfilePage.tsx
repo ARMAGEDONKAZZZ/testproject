@@ -11,6 +11,7 @@ import { useMe, useChangePassword, useDeleteAccount } from "@/features/profile/h
 import { useSessionStore } from "@/features/auth/session";
 import { EditProfileModal } from "./components/EditProfileModal";
 import { SkillsPentagon } from "./components/SkillsPentagon";
+import { ProfileSidebar } from "./components/ProfileSidebar";
 
 export default function ProfilePage() {
   const { t } = useTranslation();
@@ -23,13 +24,18 @@ export default function ProfilePage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   if (isLoading || !me) {
-    return <div className="p-10 text-center text-text-secondary">{t("common.loading")}</div>;
+    return (
+      <ProfileSidebar>
+        <div className="text-center text-text-secondary">{t("common.loading")}</div>
+      </ProfileSidebar>
+    );
   }
 
   const isAdult = me.email !== undefined;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 px-6 py-10">
+    <ProfileSidebar>
+      <div className="space-y-4">
       <h1 className="text-2xl font-bold text-text-primary">{t("profile.title")}</h1>
 
       <Card className="flex items-center justify-between">
@@ -117,7 +123,8 @@ export default function ProfilePage() {
           navigate("/auth/login", { replace: true });
         }}
       />
-    </div>
+      </div>
+    </ProfileSidebar>
   );
 }
 
