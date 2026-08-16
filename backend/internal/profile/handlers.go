@@ -38,6 +38,7 @@ func (h *Handlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		"user":             userJSON(res.User),
 		"skillProfile":     skillProfileJSON(res.SkillProfile),
 		"boardPreferences": boardPreferencesJSON(res.BoardPreferences),
+		"onboarding":       onboardingJSON(res.OnboardingState),
 	}
 	// FR-043/044: parentLink is present only for a minor profile that has a
 	// guardian link on file. Whether "email" is present on the user object
@@ -103,6 +104,16 @@ func boardPreferencesJSON(bp BoardPreferences) map[string]any {
 		"showCoordinates":   bp.ShowCoordinates,
 		"animationSpeedPct": bp.AnimationSpeedPct,
 		"updatedAt":         bp.UpdatedAt,
+	}
+}
+
+func onboardingJSON(o OnboardingState) map[string]any {
+	return map[string]any{
+		"role":                o.Role,
+		"declaredLevel":       o.DeclaredLevel,
+		"wizardCompleted":     o.WizardCompleted,
+		"homeTourCompleted":   o.HomeTourCompleted,
+		"puzzleTourCompleted": o.PuzzleTourCompleted,
 	}
 }
 
@@ -343,4 +354,38 @@ func (h *Handlers) SetBoardPreferences(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpserver.WriteJSON(w, http.StatusOK, map[string]any{"boardPreferences": boardPreferencesJSON(bp)})
+}
+
+// --- PATCH /me/onboarding ---
+
+type updateOnboardingRequest struct {
+	Role                *string `json:"role" validate:"omitempty,oneof=student teacher"`
+	DeclaredLevel       *string `json:"declaredLevel" validate:"omitempty,oneof=beginner intermediate advanced expert"`
+	WizardCompleted     *bool   `json:"wizardCompleted"`
+	HomeTourCompleted   *bool   `json:"homeTourCompleted"`
+	PuzzleTourCompleted *bool   `json:"puzzleTourCompleted"`
+}
+
+func (h *Handlers) UpdateOnboarding(w http.ResponseWriter, r *http.Request) {
+	userID, ok := httpserver.UserIDFromContext(r.Context())
+	if !ok {
+		httpserver.WriteUnauthenticated(w, "Требуется авторизация")
+		return
+	}
+	var req updateOnboardingRequest
+	if !httpserver.DecodeJSON(w, r, &req) {
+		return
+	}
+	if err := validate.Struct(req); err != nil {
+		httpserver.WriteValidationError(w, "Некорректное значение роли или уровня", nil)
+		return
+	}
+
+	ob, err := h.service.UpdateOnboardingState(r.Context(), userID, req.Role, req.DeclaredLevel, req.WizardCompleted, req.HomeTourCompleted, req.PuzzleTourCompleted)
+	if err != nil {
+		httpserver.WriteInternalError(w, err)
+		return
+	}
+
+	httpserver.WriteJSON(w, http.StatusOK, map[string]any{"onboarding": onboardingJSON(ob)})
 }

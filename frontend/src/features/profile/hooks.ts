@@ -25,6 +25,14 @@ export interface BoardPreferences {
   animationSpeedPct: number;
 }
 
+export interface OnboardingState {
+  role: "student" | "teacher" | null;
+  declaredLevel: "beginner" | "intermediate" | "advanced" | "expert" | null;
+  wizardCompleted: boolean;
+  homeTourCompleted: boolean;
+  puzzleTourCompleted: boolean;
+}
+
 export interface Me {
   id: string;
   nickname: string;
@@ -35,17 +43,19 @@ export interface Me {
   parentLink?: ParentLink;
   skillProfile: SkillProfile;
   boardPreferences: BoardPreferences;
+  onboarding: OnboardingState;
 }
 
 // Wire shape of GET /me per contracts/rest-api.md: the user's own fields are
 // nested under "user", alongside separate "skillProfile"/"boardPreferences"/
-// optional "parentLink" keys — not the flat object the rest of the frontend
-// consumes as `Me`. useMe() flattens it once here.
+// "onboarding"/optional "parentLink" keys — not the flat object the rest of
+// the frontend consumes as `Me`. useMe() flattens it once here.
 interface MeResponse {
-  user: Omit<Me, "skillProfile" | "boardPreferences" | "parentLink">;
+  user: Omit<Me, "skillProfile" | "boardPreferences" | "parentLink" | "onboarding">;
   parentLink?: ParentLink;
   skillProfile: SkillProfile;
   boardPreferences: BoardPreferences;
+  onboarding: OnboardingState;
 }
 
 export function useMe() {
@@ -59,6 +69,7 @@ export function useMe() {
         parentLink: res.parentLink,
         skillProfile: res.skillProfile,
         boardPreferences: res.boardPreferences,
+        onboarding: res.onboarding,
       };
       return flattened;
     },
@@ -90,6 +101,20 @@ export function useDeleteAccount() {
     // (caught via direct API testing since drag-based UI testing wasn't
     // available for the puzzle board in this environment).
     mutationFn: () => api.delete<Record<string, never>>("/me", { confirm: true }),
+  });
+}
+
+export function useUpdateOnboarding() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      role?: "student" | "teacher";
+      declaredLevel?: "beginner" | "intermediate" | "advanced" | "expert";
+      wizardCompleted?: boolean;
+      homeTourCompleted?: boolean;
+      puzzleTourCompleted?: boolean;
+    }) => api.patch<{ onboarding: OnboardingState }>("/me/onboarding", input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["me"] }),
   });
 }
 

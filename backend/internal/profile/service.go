@@ -34,6 +34,7 @@ type MeResult struct {
 	ParentLink       *ParentLink // nil for an adult, or a minor with no link on file
 	SkillProfile     SkillProfile
 	BoardPreferences BoardPreferences
+	OnboardingState  OnboardingState
 }
 
 // GetMe loads the full profile view for the authenticated caller.
@@ -70,7 +71,30 @@ func (s *Service) GetMe(ctx context.Context, userID uuid.UUID) (MeResult, error)
 	}
 	res.BoardPreferences = bp
 
+	ob, err := s.repo.GetOrCreateOnboardingState(ctx, userID)
+	if err != nil {
+		return MeResult{}, err
+	}
+	res.OnboardingState = ob
+
 	return res, nil
+}
+
+// UpdateOnboardingState applies a partial patch to the caller's onboarding
+// progress (wizard role/level choice, or one of the *Completed flags
+// flipping to true). Lazily creates the row first so a patch can't 404 for
+// a user who has never had GET /me called yet.
+func (s *Service) UpdateOnboardingState(
+	ctx context.Context, userID uuid.UUID,
+	role, declaredLevel *string, wizardCompleted, homeTourCompleted, puzzleTourCompleted *bool,
+) (OnboardingState, error) {
+	if _, err := s.repo.GetOrCreateOnboardingState(ctx, userID); err != nil {
+		return OnboardingState{}, err
+	}
+	if err := s.repo.UpdateOnboardingState(ctx, userID, role, declaredLevel, wizardCompleted, homeTourCompleted, puzzleTourCompleted); err != nil {
+		return OnboardingState{}, err
+	}
+	return s.repo.GetOrCreateOnboardingState(ctx, userID)
 }
 
 // UpdateProfile applies a partial edit to name/age/avatar (FR-045).

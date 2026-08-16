@@ -86,6 +86,21 @@ type BoardPreferences struct {
 	UpdatedAt         time.Time
 }
 
+// OnboardingState tracks first-run progress: the post-registration wizard
+// (welcome → role → level) plus the two contextual coach-mark tours on
+// /generate and /puzzle/:id. Each *Completed flag is backend-persisted
+// (not sessionStorage) so it survives logout/device changes — "second time,
+// don't show again" has to hold across sessions, not just within a tab.
+type OnboardingState struct {
+	UserID              uuid.UUID
+	Role                *string // "student" | "teacher", nil until chosen
+	DeclaredLevel       *string // "beginner" | "intermediate" | "advanced" | "expert", nil until chosen
+	WizardCompleted     bool
+	HomeTourCompleted   bool
+	PuzzleTourCompleted bool
+	UpdatedAt           time.Time
+}
+
 // DeriveAgeTier / RequiresGuardianConsent — DELIBERATE DUPLICATION.
 //
 // internal/auth owns the canonical implementation of these two pure,

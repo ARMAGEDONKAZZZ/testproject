@@ -21,7 +21,7 @@ function pointFor(index: number, value: number, size: number) {
   return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
 }
 
-export function SkillsPentagon({ skills }: { skills: SkillProfile }) {
+export function SkillsPentagon({ skills, hideEdit }: { skills: SkillProfile; hideEdit?: boolean }) {
   const [editOpen, setEditOpen] = useState(false);
   const size = 220;
   const points = AXES.map((axis, i) => pointFor(i, skills[axis.key], size));
@@ -54,13 +54,15 @@ export function SkillsPentagon({ skills }: { skills: SkillProfile }) {
               </div>
             </div>
           ))}
-          <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>
-            ⚡ Edit
-          </Button>
+          {!hideEdit && (
+            <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>
+              ⚡ Edit
+            </Button>
+          )}
         </div>
       </div>
 
-      <FocusAxesModal open={editOpen} onOpenChange={setEditOpen} initial={skills.focusAxes} />
+      {!hideEdit && <FocusAxesModal open={editOpen} onOpenChange={setEditOpen} initial={skills.focusAxes} />}
     </div>
   );
 }

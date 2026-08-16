@@ -17,6 +17,7 @@ import { HintPaywallModal } from "./components/HintPaywallModal";
 import { LessonsPanel } from "./components/LessonsPanel";
 import { TimerModal } from "./components/TimerModal";
 import { ShareModal } from "./components/ShareModal";
+import { PuzzleOnboardingTour } from "@/features/onboarding/PuzzleOnboardingTour";
 import { materialBalance } from "./utils/material";
 import { trainingIntroMessage } from "./utils/trainingMessages";
 import { playTimerBeep } from "./utils/beep";
@@ -490,6 +491,8 @@ export default function PuzzlePage() {
         onOpenChange={setFolderPickerOpen}
         puzzleId={currentPuzzleId}
       />
+
+      <PuzzleOnboardingTour />
     </div>
   );
 }

@@ -27,5 +27,6 @@ func RegisterRoutes(api chi.Router, authMiddleware func(http.Handler) http.Handl
 		r.Get("/me/training/summary", h.GetTrainingSummary)
 		r.Patch("/me/skills/focus", h.SetFocusAxes)
 		r.Put("/me/board-preferences", h.SetBoardPreferences)
+		r.Patch("/me/onboarding", h.UpdateOnboarding)
 	})
 }

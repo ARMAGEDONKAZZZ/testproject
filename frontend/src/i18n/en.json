@@ -199,5 +199,57 @@
       "openings": "Openings — Traps",
       "endgames": "Endgame — Pawn promotion"
     }
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "startLearning": "Start learning",
+    "yourLevel": "Your level",
+    "wizard": {
+      "welcomeTitle": "Welcome to Neuratop!",
+      "welcomeBody": "Hi, I'm Tapti! I'll help you set up your training to match your level and goals, so you can start right away.",
+      "roleTitle": "Let's personalize your learning",
+      "roleBody": "We'll tailor training and show you the platform features that are most useful for your role.",
+      "roleStudent": "Student",
+      "roleTeacher": "Teacher",
+      "levelChoiceTitle": "Let's determine your level",
+      "levelChoiceBody": "This will take about 5 minutes and help us pick a comfortable training program.",
+      "levelChoiceManual": "Choose manually",
+      "levelChoiceStart": "Take the test",
+      "levelTestTaskLabel": "Puzzle {{n}}",
+      "levelTestProgress": "Test progress",
+      "levelTestSolved": "{{solved}} of {{total}} solved",
+      "levelTestDoneTitle": "Great, testing complete!",
+      "levelTestDoneBody": "We've set up a personal training program for your level.",
+      "levelManualTitle": "Choose your level",
+      "levelManualBody": "Pick the level that best matches your current skills. You can change it later.",
+      "levelBeginner": "Beginner",
+      "levelBeginnerDesc": "Just starting out, know only the basic rules",
+      "levelIntermediate": "Intermediate",
+      "levelIntermediateDesc": "Solve simple puzzles, learning tactics",
+      "levelAdvanced": "Advanced",
+      "levelAdvancedDesc": "Understand the game well and can analyze on my own",
+      "levelExpert": "Expert",
+      "levelExpertDesc": "Play at a high level",
+      "levelManualDoneTitle": "Great, level chosen!",
+      "levelManualDoneBody": "We've set up a personal training program for your level."
+    },
+    "homeTour": {
+      "step1Title": "Let's get acquainted",
+      "step1Body": "Hi, I'm Tapti! I'll help you get familiar with the chess puzzle generator's main features",
+      "step2Title": "Generate your first puzzle",
+      "step2Body": "Describe a puzzle or pick a quick category under the generation field",
+      "step3Title": "Where would you like to start?",
+      "step3Body": "Here are a few puzzles to help you get started comfortably and raise your level."
+    },
+    "puzzleTour": {
+      "step1Title": "Detailed analysis",
+      "step1Body": "See the best moves, position evaluation, and analyze the game",
+      "step2Title": "Track your progress",
+      "step2Body": "As you level up, the system will automatically pick harder tactical training",
+      "step3Title": "Control panel",
+      "step3Body": "Use the side panel to save, share, generate puzzles, and get help from Tapti",
+      "step4Title": "Your AI assistant – Tapti",
+      "step4Body": "I'll help with analysis, support your training, and make it more effective."
+    }
   }
 }

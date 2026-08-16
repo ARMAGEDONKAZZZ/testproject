@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Pill } from "@/components/Pill";
 import { toast } from "@/components/Toast";
 import { ApiError } from "@/api/client";
-import { Plus, Minus, ArrowUp, ChevronDown, Grid, Carousel as CarouselIcon, X } from "@/components/icons";
+import { Plus, Minus, ArrowUp, ChevronDown, Grid, Carousel as CarouselIcon, X, Check, Regenerate } from "@/components/icons";
 import { Mascot } from "@/components/Mascot";
 import { MiniBoard } from "@/components/MiniBoard";
 import { GenerateSidebar } from "@/components/GenerateSidebar";
@@ -14,6 +13,7 @@ import { RecommendedCard } from "./components/RecommendedCard";
 import { PuzzleCarousel } from "./components/PuzzleCarousel";
 import { PuzzleActionBar } from "./components/PuzzleActionBar";
 import { AttachMenu } from "./components/AttachMenu";
+import { HomeOnboardingTour } from "@/features/onboarding/HomeOnboardingTour";
 import {
   useCreateGeneration,
   useGeneration,
@@ -165,28 +165,50 @@ export default function GeneratePage() {
         )}
 
         {isGenerating && (
-        <Card className="mb-6 text-center">
-          <p className="mb-3 text-accent-green">{t("generate.generating")}</p>
-          <div className="mx-auto h-1.5 w-2/3 overflow-hidden rounded-full bg-bg-elevated">
-            <div className="h-full w-2/3 animate-pulse bg-accent-green" />
-          </div>
-          <div className="mt-3 flex justify-center gap-4 text-xs text-text-muted">
-            <span>{t("generate.stepFetching")}</span>
-            <span>{t("generate.stepCalibrating")}</span>
-            <span>{t("generate.stepGenerating")}</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-3"
-            onClick={() => {
-              void cancelGeneration.mutateAsync(generationId!);
-              setGenerationId(null);
-            }}
-          >
-            {t("generate.cancel")}
-          </Button>
-        </Card>
+        <>
+          {/* Ambient green glow behind the loading card, per
+              figma/Chess Puzzle Generation Screen (1).png. Card below gets
+              relative z-10 so both share an explicit stacking context and
+              z-index alone decides paint order (avoids the positioned-vs-
+              static stacking pitfall a plain z-0 fixed div would hit). */}
+          <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[560px] bg-[radial-gradient(ellipse_at_top,rgba(34,197,94,0.35),transparent_70%)]" />
+          <Card className="relative z-10 mb-6 overflow-hidden text-center">
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 opacity-[0.06]"
+              style={{
+                backgroundImage: "repeating-conic-gradient(#fff 0% 25%, transparent 0% 50%)",
+                backgroundSize: "32px 32px",
+              }}
+            />
+            <div className="relative flex flex-col items-center py-2">
+              <div className="relative mb-4 h-20 w-20">
+                <div className="absolute inset-0 animate-spin rounded-full border-[3px] border-accent-green/15 border-t-accent-green" />
+                <div className="absolute inset-2 flex items-center justify-center rounded-full bg-gradient-to-b from-accent-green/30 to-accent-green/5">
+                  <Mascot className="h-9 w-10" />
+                </div>
+              </div>
+              <p className="mb-3 font-semibold text-text-primary">{t("generate.generating")}</p>
+              <div className="mx-auto h-1.5 w-2/3 overflow-hidden rounded-full bg-bg-elevated">
+                <div className="h-full w-2/3 animate-pulse rounded-full bg-accent-green" />
+              </div>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <GenerationStepPill done label={t("generate.stepFetching")} />
+                <GenerationStepPill done label={t("generate.stepCalibrating")} />
+                <GenerationStepPill label={t("generate.stepGenerating")} />
+              </div>
+              <button
+                type="button"
+                className="mt-3 text-xs text-text-muted hover:text-text-secondary"
+                onClick={() => {
+                  void cancelGeneration.mutateAsync(generationId!);
+                  setGenerationId(null);
+                }}
+              >
+                {t("generate.cancel")}
+              </button>
+            </div>
+          </Card>
+        </>
       )}
 
       {generation?.status === "failed" && (
@@ -329,9 +351,13 @@ export default function GeneratePage() {
             onClick={() => void handleSubmit()}
             disabled={createGeneration.isPending || isGenerating}
             title={t("generate.generateButton")}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-green text-bg-primary disabled:opacity-50"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-green text-bg-primary disabled:opacity-80"
           >
-            <ArrowUp className="h-5 w-5" />
+            {createGeneration.isPending || isGenerating ? (
+              <Regenerate className="h-5 w-5 animate-spin" />
+            ) : (
+              <ArrowUp className="h-5 w-5" />
+            )}
           </button>
         </div>
 
@@ -352,7 +378,21 @@ export default function GeneratePage() {
         </div>
       </Card>
       </div>
+      <HomeOnboardingTour />
     </div>
+  );
+}
+
+function GenerationStepPill({ label, done }: { label: string; done?: boolean }) {
+  return (
+    <span className="flex items-center gap-1.5 rounded-full bg-bg-elevated px-3 py-1.5 text-xs text-text-secondary">
+      {done ? (
+        <Check className="h-3 w-3 text-accent-green" />
+      ) : (
+        <span className="h-2 w-2 rounded-full border border-text-muted" />
+      )}
+      {label}
+    </span>
   );
 }
 

@@ -253,3 +253,60 @@ func (r *Repository) UpdateBoardPreferences(ctx context.Context, userID uuid.UUI
 		prefs.Theme, prefs.PieceSet, prefs.ShowCoordinates, prefs.AnimationSpeedPct, userID)
 	return err
 }
+
+// --- onboarding_state ---
+
+func (r *Repository) getOnboardingState(ctx context.Context, userID uuid.UUID) (OnboardingState, error) {
+	var o OnboardingState
+	err := r.pool.QueryRow(ctx, `
+		SELECT user_id, role, declared_level, wizard_completed, home_tour_completed, puzzle_tour_completed, updated_at
+		FROM onboarding_state WHERE user_id = $1`, userID,
+	).Scan(&o.UserID, &o.Role, &o.DeclaredLevel, &o.WizardCompleted, &o.HomeTourCompleted, &o.PuzzleTourCompleted, &o.UpdatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return OnboardingState{}, ErrNotFound
+	}
+	if err != nil {
+		return OnboardingState{}, err
+	}
+	return o, nil
+}
+
+// GetOrCreateOnboardingState lazily creates the default (nothing completed
+// yet) row the first time it's read (mirrors GetOrCreateBoardPreferences).
+func (r *Repository) GetOrCreateOnboardingState(ctx context.Context, userID uuid.UUID) (OnboardingState, error) {
+	o, err := r.getOnboardingState(ctx, userID)
+	if err == nil {
+		return o, nil
+	}
+	if !errors.Is(err, ErrNotFound) {
+		return OnboardingState{}, err
+	}
+	if _, err := r.pool.Exec(ctx, `
+		INSERT INTO onboarding_state (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, userID,
+	); err != nil {
+		return OnboardingState{}, err
+	}
+	return r.getOnboardingState(ctx, userID)
+}
+
+// UpdateOnboardingState applies a partial patch — nil pointers leave the
+// existing column untouched, mirroring UpdateProfile's COALESCE style.
+// Booleans only ever move false->true in practice (see Service), but are
+// still passed as pointers so "not provided" and "explicitly false" stay
+// distinguishable at this layer.
+func (r *Repository) UpdateOnboardingState(
+	ctx context.Context, userID uuid.UUID,
+	role, declaredLevel *string, wizardCompleted, homeTourCompleted, puzzleTourCompleted *bool,
+) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE onboarding_state SET
+			role                  = COALESCE($1, role),
+			declared_level        = COALESCE($2, declared_level),
+			wizard_completed      = COALESCE($3, wizard_completed),
+			home_tour_completed   = COALESCE($4, home_tour_completed),
+			puzzle_tour_completed = COALESCE($5, puzzle_tour_completed),
+			updated_at            = now()
+		WHERE user_id = $6`,
+		role, declaredLevel, wizardCompleted, homeTourCompleted, puzzleTourCompleted, userID)
+	return err
+}

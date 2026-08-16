@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { RequireAuth, RedirectIfAuthenticated } from "@/app/routeGuards";
 import { Layout } from "@/components/Layout";
+import { OnboardingGate } from "@/features/onboarding/OnboardingGate";
 
 const RegisterPage = lazy(() => import("@/pages/auth/RegisterPage"));
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
@@ -30,7 +31,9 @@ function PageFallback() {
 function Authenticated({ children }: { children: React.ReactNode }) {
   return (
     <RequireAuth>
-      <Layout>{children}</Layout>
+      <Layout>
+        <OnboardingGate>{children}</OnboardingGate>
+      </Layout>
     </RequireAuth>
   );
 }
