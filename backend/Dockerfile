@@ -63,4 +63,10 @@ USER app
 ENV HTTP_PORT=10000
 EXPOSE 10000
 
-ENTRYPOINT ["./api"]
+# Run pending migrations before serving on every container start. Render's
+# free-tier services don't expose a Shell tab, so a manual `./migrate` step
+# isn't reliably available — this makes new migrations self-apply on deploy
+# instead. db.Migrate (see internal/platform/db/migrate.go) tracks applied
+# filenames in schema_migrations and skips ones already run, so this is safe
+# to execute on every boot, not just the first.
+ENTRYPOINT ["sh", "-c", "./migrate && exec ./api"]
