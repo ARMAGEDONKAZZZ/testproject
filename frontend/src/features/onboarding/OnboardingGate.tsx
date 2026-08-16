@@ -9,9 +9,21 @@ import { OnboardingWizard } from "./OnboardingWizard";
  * completed it yet. Once `wizardCompleted` flips true server-side, this
  * renders nothing — the flag lives in onboarding_state (backend-persisted),
  * so it stays completed across logout/device changes, not just this tab.
+ *
+ * `children` is withheld until the first /me fetch resolves — otherwise the
+ * page underneath is fully interactive for however long that request takes
+ * (visible on a real network, not just localhost), and the wizard pops in
+ * late over whatever the user already started doing instead of appearing
+ * immediately, blocking everything, right after registration. `isLoading`
+ * (TanStack Query v5) is true only for that first fetch — once `me` is
+ * cached, navigating between pages never shows this again.
  */
 export function OnboardingGate({ children }: { children: ReactNode }) {
-  const { data: me } = useMe();
+  const { data: me, isLoading } = useMe();
+
+  if (isLoading) {
+    return <div className="flex min-h-screen items-center justify-center text-text-secondary">Загрузка…</div>;
+  }
 
   return (
     <>
