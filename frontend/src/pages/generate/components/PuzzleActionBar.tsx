@@ -58,10 +58,13 @@ export function PuzzleActionBar({
   puzzle,
   onRegenerate,
   size = "md",
+  siblingIds,
 }: {
   puzzle: Puzzle;
   onRegenerate: () => void;
   size?: "sm" | "md";
+  /** Other puzzle IDs from the same result set — carried via router state so the solving screen can offer prev/next navigation. */
+  siblingIds?: string[];
 }) {
   const toggleFavorite = useToggleFavorite(puzzle.id);
   const [favorited, setFavorited] = useState(false);
@@ -76,7 +79,11 @@ export function PuzzleActionBar({
 
   return (
     <div className={`flex ${size === "sm" ? "gap-1.5" : "gap-3"}`}>
-      <Link to={`/puzzle/${puzzle.id}`} onClick={(e) => e.stopPropagation()}>
+      <Link
+        to={`/puzzle/${puzzle.id}`}
+        state={siblingIds ? { siblingIds } : undefined}
+        onClick={(e) => e.stopPropagation()}
+      >
         <ActionButton action="eye" size={size}>
           <Eye className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
         </ActionButton>

@@ -39,6 +39,7 @@ export function PuzzleCarousel({
   const { t } = useTranslation();
   const puzzle = puzzles[index];
   const [hovering, setHovering] = useState(false);
+  const siblingIds = puzzles.map((p) => p.id);
 
   const canPrev = index > 0;
   const canNext = index < puzzles.length - 1;
@@ -83,6 +84,7 @@ export function PuzzleCarousel({
           {hovering && (
             <Link
               to={`/puzzle/${puzzle.id}`}
+              state={{ siblingIds }}
               className="absolute inset-0 flex items-center justify-center bg-bg-primary/40 opacity-0 transition-opacity group-hover:opacity-100"
             >
               <span className="flex items-center gap-2 rounded-full bg-accent-green px-4 py-2 text-sm font-semibold text-bg-primary">
@@ -106,7 +108,7 @@ export function PuzzleCarousel({
       </div>
 
       <div className="mt-5">
-        <PuzzleActionBar puzzle={puzzle} onRegenerate={() => onRegenerate(puzzle.id)} />
+        <PuzzleActionBar puzzle={puzzle} onRegenerate={() => onRegenerate(puzzle.id)} siblingIds={siblingIds} />
       </div>
 
       {puzzle.description && (

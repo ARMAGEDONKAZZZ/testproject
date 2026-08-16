@@ -239,6 +239,7 @@ export default function GeneratePage() {
                   puzzle={p}
                   index={i}
                   total={puzzles.length}
+                  siblingIds={puzzles.map((sp) => sp.id)}
                   onRegenerate={() => void regenerate.mutateAsync(p.id)}
                 />
               ))}
@@ -359,23 +360,25 @@ function PuzzleCard({
   puzzle,
   index,
   total,
+  siblingIds,
   onRegenerate,
 }: {
   puzzle: Generation["puzzles"][number];
   index: number;
   total: number;
+  siblingIds: string[];
   onRegenerate: () => void;
 }) {
   const { t } = useTranslation();
   const sideLabel = puzzle.sideToMove === "white" ? "Ходят Белые" : "Ходят Чёрные";
   return (
     <div className="group relative rounded-xl border border-border-subtle p-3 hover:border-accent-violet">
-      <Link to={`/puzzle/${puzzle.id}`} className="block">
+      <Link to={`/puzzle/${puzzle.id}`} state={{ siblingIds }} className="block">
         <div className="relative">
           <MiniBoard fen={puzzle.fen} />
           <div className="absolute inset-x-0 bottom-0 flex justify-center pb-2 opacity-0 transition-opacity group-hover:opacity-100">
             <div onClick={(e) => e.preventDefault()}>
-              <PuzzleActionBar puzzle={puzzle} onRegenerate={onRegenerate} size="sm" />
+              <PuzzleActionBar puzzle={puzzle} onRegenerate={onRegenerate} size="sm" siblingIds={siblingIds} />
             </div>
           </div>
         </div>

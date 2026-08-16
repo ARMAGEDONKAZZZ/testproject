@@ -14,10 +14,11 @@ export function PuzzleGrid({
   onAddToFolder?: (puzzleId: string) => void;
 }) {
   if (puzzles.length === 0) return null;
+  const siblingIds = puzzles.map((p) => p.id);
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
       {puzzles.map((p) => (
-        <PuzzleGridCard key={p.id} puzzle={p} onAddToFolder={onAddToFolder} />
+        <PuzzleGridCard key={p.id} puzzle={p} onAddToFolder={onAddToFolder} siblingIds={siblingIds} />
       ))}
     </div>
   );
@@ -26,16 +27,18 @@ export function PuzzleGrid({
 function PuzzleGridCard({
   puzzle,
   onAddToFolder,
+  siblingIds,
 }: {
   puzzle: PuzzleView;
   onAddToFolder?: (puzzleId: string) => void;
+  siblingIds: string[];
 }) {
   const { t } = useTranslation();
   const toggleFavorite = useToggleFavorite(puzzle.id);
 
   return (
     <div className="rounded-xl border border-border-subtle p-3">
-      <Link to={`/puzzle/${puzzle.id}`}>
+      <Link to={`/puzzle/${puzzle.id}`} state={{ siblingIds }}>
         <MiniBoard fen={puzzle.fen} />
       </Link>
       <div className="mt-2 flex items-center justify-between text-xs text-text-secondary">

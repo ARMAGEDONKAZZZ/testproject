@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/Card";
@@ -9,6 +9,7 @@ import { Modal } from "@/components/Modal";
 import { Mascot } from "@/components/Mascot";
 import { toast } from "@/components/Toast";
 import { ApiError, api } from "@/api/client";
+import { Timer, ChevronLeft, ChevronRight } from "@/components/icons";
 import { ChessBoardView } from "./components/ChessBoardView";
 import { ToolbarSidebar } from "./components/ToolbarSidebar";
 import { BoardThemePicker } from "./components/BoardThemePicker";
@@ -40,8 +41,21 @@ export default function PuzzlePage() {
   const { puzzleId } = useParams<{ puzzleId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const isTraining = searchParams.get("mode") === "training";
   const resumedFromSimplify = searchParams.get("resumed") === "1";
+  // Carried via router state from PuzzleCarousel/PuzzleActionBar/PuzzleGrid
+  // links — lets the solving screen offer prev/next through the same
+  // result set (generation batch, folder, history, favorites) it was
+  // opened from, per docs/design-audit/toolboard.md ("‹ ›" pagination).
+  const siblingIds = (location.state as { siblingIds?: string[] } | null)?.siblingIds;
+  const siblingIndex = siblingIds ? siblingIds.indexOf(puzzleId ?? "") : -1;
+  const hasSiblingNav = !!siblingIds && siblingIds.length > 1 && siblingIndex !== -1;
+
+  function goToSibling(newIndex: number) {
+    if (!siblingIds) return;
+    navigate(`/puzzle/${siblingIds[newIndex]}${location.search}`, { state: { siblingIds } });
+  }
   const { data: me } = useMe();
   const { data: puzzle, isLoading } = usePuzzle(puzzleId ?? "");
   const startAttempt = useStartAttempt(puzzleId ?? "");
@@ -79,6 +93,12 @@ export default function PuzzlePage() {
   useEffect(() => {
     if (!puzzleId) return;
     setCurrentPuzzleId(puzzleId);
+    // Route param changed (e.g. prev/next sibling navigation) — this
+    // component instance is reused by React Router, so per-puzzle UI state
+    // from the previous puzzle must be cleared explicitly.
+    setOutcome("idle");
+    setHintText(null);
+    setAttemptId(null);
   }, [puzzleId]);
 
   useEffect(() => {
@@ -142,12 +162,13 @@ export default function PuzzlePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [regenGeneration?.status]);
 
-  async function handleMove(san: string) {
+  async function handleMove(san: string, resultFen: string) {
     if (!attemptId) return;
     try {
       const res = await submitMove.mutateAsync(san);
       if (res.correct) {
         setOutcome("correct");
+        setCurrentFen(resultFen);
         if (isTraining && originalPuzzleId && originalPuzzleId !== currentPuzzleId) {
           setMascotBubble(t("selfEducation.returnMessage"));
         } else if (isTraining && resumedFromSimplify) {
@@ -230,6 +251,19 @@ export default function PuzzlePage() {
           {puzzle.objective}
         </h1>
         <div className="flex items-center gap-2">
+          {remainingSeconds !== null && (
+            <span
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-sm font-semibold ${
+                remainingSeconds <= 10
+                  ? "animate-pulse bg-danger/20 text-danger"
+                  : "bg-accent-violet/20 text-accent-violet-light"
+              }`}
+            >
+              <Timer className="h-4 w-4" />
+              {String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:
+              {String(remainingSeconds % 60).padStart(2, "0")}
+            </span>
+          )}
           <Pill tone="neutral">
             {puzzle.sideToMove === "white" ? t("puzzle.whiteToMove") : t("puzzle.blackToMove")}
           </Pill>
@@ -268,13 +302,6 @@ export default function PuzzlePage() {
             </div>
           )}
 
-          {remainingSeconds !== null && (
-            <div className="mb-2 inline-flex items-center gap-1 rounded-full bg-bg-elevated px-3 py-1 font-mono text-sm text-text-primary">
-              {String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:
-              {String(remainingSeconds % 60).padStart(2, "0")}
-            </div>
-          )}
-
           <Card
             className={
               outcome === "correct"
@@ -284,15 +311,47 @@ export default function PuzzlePage() {
                   : undefined
             }
           >
-            <div className="relative">
-              <ChessBoardView
-                fen={currentFen}
-                orientation={orientation}
-                interactive={outcome === "idle" && !regenerating}
-                onMove={(san) => void handleMove(san)}
-              />
-              {regenerating && <RegenerateOverlay />}
+            <div className="flex items-center justify-center gap-3">
+              {hasSiblingNav && (
+                <button
+                  type="button"
+                  onClick={() => goToSibling(siblingIndex - 1)}
+                  disabled={siblingIndex <= 0}
+                  aria-label={t("selfEducation.previousPuzzle")}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-bg-elevated text-text-primary transition-colors hover:border-accent-green hover:text-accent-green disabled:opacity-30"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+              )}
+
+              <div className="relative flex-1">
+                <ChessBoardView
+                  fen={currentFen}
+                  orientation={orientation}
+                  interactive={outcome === "idle" && !regenerating}
+                  onMove={(san, resultFen) => void handleMove(san, resultFen)}
+                />
+                {regenerating && <RegenerateOverlay />}
+              </div>
+
+              {hasSiblingNav && (
+                <button
+                  type="button"
+                  onClick={() => goToSibling(siblingIndex + 1)}
+                  disabled={siblingIndex >= siblingIds!.length - 1}
+                  aria-label="Следующая задача"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-bg-elevated text-text-primary transition-colors hover:border-accent-green hover:text-accent-green disabled:opacity-30"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              )}
             </div>
+
+            {hasSiblingNav && (
+              <p className="mt-2 text-center text-xs text-text-muted">
+                {siblingIndex + 1} / {siblingIds!.length}
+              </p>
+            )}
 
             {outcome === "correct" && (
               <div className="mt-4 rounded-xl bg-accent-green/10 p-3 text-center text-accent-green">
@@ -407,11 +466,7 @@ export default function PuzzlePage() {
         }}
       />
 
-      <ShareModal
-        open={shareModalOpen}
-        onOpenChange={setShareModalOpen}
-        onAddToFolder={() => setFolderPickerOpen(true)}
-      />
+      <ShareModal open={shareModalOpen} onOpenChange={setShareModalOpen} puzzleId={currentPuzzleId} />
 
       <FolderPickerModal
         open={folderPickerOpen}
