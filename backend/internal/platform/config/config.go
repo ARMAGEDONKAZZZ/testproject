@@ -17,6 +17,7 @@ type Config struct {
 	AccessTokenTTL    time.Duration
 	RefreshTokenTTL   time.Duration
 	CORSAllowedOrigin string
+	PublicBaseURL     string
 	SMTPHost          string
 	SMTPPort          string
 	SMTPUser          string
@@ -32,6 +33,12 @@ func Load() (Config, error) {
 		HTTPPort:          getEnvDefault("HTTP_PORT", "8080"),
 		DatabaseURL:       os.Getenv("DATABASE_URL"),
 		CORSAllowedOrigin: getEnvDefault("CORS_ALLOWED_ORIGIN", "http://localhost:5173"),
+		// Absolute origin used to build share links (internal/folder
+		// shareURLForSlug) — must match wherever the SPA's /share/:slug route
+		// is actually reachable. Defaults to the frontend dev server; set to
+		// the real deployed origin (e.g. https://testproject-sz4h.onrender.com)
+		// in production.
+		PublicBaseURL: getEnvDefault("PUBLIC_BASE_URL", "http://localhost:5173"),
 		SMTPHost:          os.Getenv("SMTP_HOST"),
 		SMTPPort:          getEnvDefault("SMTP_PORT", "1025"),
 		SMTPUser:          os.Getenv("SMTP_USER"),

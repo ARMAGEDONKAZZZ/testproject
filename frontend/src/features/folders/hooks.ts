@@ -87,8 +87,14 @@ export function useFavorites(tag?: string, sideToMove?: string) {
 export function useSharedFolder(slug: string | undefined, password?: string) {
   return useQuery({
     queryKey: ["shared-folder", slug, password],
+    // Public endpoint (no authMiddleware, see routes.go) — the password
+    // gate is a custom header, not a query param or body, per
+    // contracts/rest-api.md ("header X-Share-Password?").
     queryFn: () =>
-      api.get<{ folder: Folder; items: PuzzleView[] }>(`/share/${slug}`),
+      api.get<{ folder: Folder; items: PuzzleView[] }>(`/share/${slug}`, {
+        skipAuth: true,
+        headers: password ? { "X-Share-Password": password } : undefined,
+      }),
     enabled: !!slug,
     retry: false,
   });

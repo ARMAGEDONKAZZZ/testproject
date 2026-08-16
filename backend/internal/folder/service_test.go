@@ -41,8 +41,16 @@ func TestGenerateShareSlug_ShapeAndUniqueness(t *testing.T) {
 }
 
 func TestShareURLForSlug(t *testing.T) {
-	got := shareURLForSlug("abc123def456")
-	want := "https://neuratop.com/board/abc123def456"
+	got := shareURLForSlug("https://testproject-sz4h.onrender.com", "abc123def456")
+	want := "https://testproject-sz4h.onrender.com/share/abc123def456"
+	if got != want {
+		t.Errorf("shareURLForSlug() = %q, want %q", got, want)
+	}
+}
+
+func TestShareURLForSlug_TrimsTrailingSlash(t *testing.T) {
+	got := shareURLForSlug("http://localhost:5173/", "abc123def456")
+	want := "http://localhost:5173/share/abc123def456"
 	if got != want {
 		t.Errorf("shareURLForSlug() = %q, want %q", got, want)
 	}

@@ -54,7 +54,7 @@ func main() {
 	puzzleDeps := puzzle.NewDeps(pool, generationDeps.Fixtures())
 	puzzle.RegisterRoutes(api, authMiddleware, puzzleDeps)
 
-	folderDeps := folder.NewDeps(pool)
+	folderDeps := folder.NewDeps(pool, cfg.PublicBaseURL)
 	folder.RegisterRoutes(api, authMiddleware, folderDeps)
 
 	profileDeps := profile.NewDeps(pool)

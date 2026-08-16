@@ -10,9 +10,9 @@ type Deps struct {
 
 // NewDeps wires the folder package's repository/service/handlers together.
 // Called once from cmd/api/main.go.
-func NewDeps(pool *pgxpool.Pool) Deps {
+func NewDeps(pool *pgxpool.Pool, publicBaseURL string) Deps {
 	repo := NewRepository(pool)
-	service := NewService(repo)
+	service := NewService(repo, publicBaseURL)
 
 	return Deps{
 		Handlers: &Handlers{service: service},

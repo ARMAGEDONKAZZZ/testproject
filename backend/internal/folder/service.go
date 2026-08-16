@@ -28,11 +28,12 @@ var (
 )
 
 type Service struct {
-	repo *Repository
+	repo          *Repository
+	publicBaseURL string
 }
 
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo *Repository, publicBaseURL string) *Service {
+	return &Service{repo: repo, publicBaseURL: publicBaseURL}
 }
 
 // --- folder CRUD ---
@@ -186,12 +187,6 @@ func (s *Service) ListHistory(ctx context.Context, ownerID uuid.UUID, page, page
 
 // --- sharing ---
 
-// shareBaseURL is the public share-link host. The exact domain is not
-// load-bearing for this iteration (see task brief) — only the /board/{slug}
-// shape matters, matching docs/design-audit/folders.md's "Share" modal and
-// FR-058.
-const shareBaseURL = "https://neuratop.com/board/"
-
 // validateShareable enforces FR-058: only a Public folder can be shared.
 // Pulled out as a small pure function so the rule is unit-testable without a
 // database (see service_test.go).
@@ -215,8 +210,14 @@ func GenerateShareSlug() string {
 	return raw[:12]
 }
 
-func shareURLForSlug(slug string) string {
-	return shareBaseURL + slug
+// shareURLForSlug builds the absolute link handed back to the client. The
+// path MUST match the SPA route that actually renders a shared folder
+// (App.tsx: <Route path="/share/:slug" element={<SharedFolderPage />} />) —
+// this previously pointed at a hardcoded "neuratop.com/board/…" that matched
+// neither the deployed origin nor any real frontend route, so every
+// generated link was a dead end regardless of visibility/password.
+func shareURLForSlug(publicBaseURL, slug string) string {
+	return strings.TrimSuffix(publicBaseURL, "/") + "/share/" + slug
 }
 
 func isUniqueViolation(err error) bool {
@@ -255,7 +256,7 @@ func (s *Service) Share(ctx context.Context, folderID, ownerID uuid.UUID, passwo
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		candidate := GenerateShareSlug()
 		if _, setErr := s.repo.SetShare(ctx, folderID, candidate, passwordHash); setErr == nil {
-			return shareURLForSlug(candidate), candidate, nil
+			return shareURLForSlug(s.publicBaseURL, candidate), candidate, nil
 		} else if !isUniqueViolation(setErr) {
 			return "", "", setErr
 		} else {

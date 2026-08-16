@@ -251,19 +251,6 @@ export default function PuzzlePage() {
           {puzzle.objective}
         </h1>
         <div className="flex items-center gap-2">
-          {remainingSeconds !== null && (
-            <span
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-sm font-semibold ${
-                remainingSeconds <= 10
-                  ? "animate-pulse bg-danger/20 text-danger"
-                  : "bg-accent-violet/20 text-accent-violet-light"
-              }`}
-            >
-              <Timer className="h-4 w-4" />
-              {String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:
-              {String(remainingSeconds % 60).padStart(2, "0")}
-            </span>
-          )}
           <Pill tone="neutral">
             {puzzle.sideToMove === "white" ? t("puzzle.whiteToMove") : t("puzzle.blackToMove")}
           </Pill>
@@ -273,6 +260,25 @@ export default function PuzzlePage() {
           <BoardThemePicker />
         </div>
       </div>
+
+      {/* Prominent top-center timer, per figma/example.png — the countdown
+          used to be a small pill easy to miss; now it's the dominant
+          element in its own row whenever a countdown is running. */}
+      {remainingSeconds !== null && (
+        <div className="mb-4 flex justify-center">
+          <div
+            className={`flex items-center gap-2 rounded-2xl border px-6 py-2.5 font-mono text-2xl font-bold tracking-wider ${
+              remainingSeconds <= 10
+                ? "animate-pulse border-danger/50 bg-danger/10 text-danger"
+                : "border-accent-violet/40 bg-accent-violet/10 text-accent-violet-light"
+            }`}
+          >
+            <Timer className="h-6 w-6" />
+            {String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:
+            {String(remainingSeconds % 60).padStart(2, "0")}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-6">
         <ToolbarSidebar
@@ -398,23 +404,7 @@ export default function PuzzlePage() {
             </div>
           )}
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <CollapsiblePanel title={t("puzzle.engineAnalyzing")} open={analysisOpen} onToggle={() => setAnalysisOpen((v) => !v)}>
-              {analysis ? (
-                <div className="space-y-1 text-sm text-text-secondary">
-                  <p>Eval: {analysis.evaluation}</p>
-                  <p>
-                    {t("puzzle.bestMove")}: {analysis.bestMove}
-                  </p>
-                  <p>
-                    {t("puzzle.depth")}: {analysis.depth}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-text-muted">{t("common.loading")}</p>
-              )}
-            </CollapsiblePanel>
-
+          <div className="mt-4">
             <CollapsiblePanel title="List Overview" open={listOpen} onToggle={() => setListOpen((v) => !v)}>
               <LessonsPanel />
             </CollapsiblePanel>
@@ -454,6 +444,38 @@ export default function PuzzlePage() {
           </div>
         </div>
       </div>
+
+      {/* Right-edge analysis drawer, per figma/example.png: a persistent
+          collapsed chevron toggles the engine-analysis panel in from the
+          right, instead of it living inline below the board. */}
+      <button
+        type="button"
+        onClick={() => setAnalysisOpen((v) => !v)}
+        aria-label={t("puzzle.engineAnalyzing")}
+        aria-expanded={analysisOpen}
+        className="fixed right-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border-subtle bg-bg-elevated text-text-secondary shadow-lg transition-colors hover:text-text-primary"
+      >
+        {analysisOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+      </button>
+
+      {analysisOpen && (
+        <div className="fixed bottom-0 right-0 top-16 z-10 w-80 max-w-[85vw] overflow-y-auto border-l border-border-subtle bg-bg-secondary p-5 shadow-2xl">
+          <h3 className="mb-3 text-sm font-semibold text-text-primary">{t("puzzle.engineAnalyzing")}</h3>
+          {analysis ? (
+            <div className="space-y-2 text-sm text-text-secondary">
+              <p>Eval: {analysis.evaluation}</p>
+              <p>
+                {t("puzzle.bestMove")}: {analysis.bestMove}
+              </p>
+              <p>
+                {t("puzzle.depth")}: {analysis.depth}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-text-muted">{t("common.loading")}</p>
+          )}
+        </div>
+      )}
 
       <HintPaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} attemptId={attemptId ?? ""} />
 
