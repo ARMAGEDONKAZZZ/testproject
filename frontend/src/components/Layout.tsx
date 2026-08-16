@@ -20,10 +20,9 @@ const LANGUAGES: { code: "ru" | "en"; label: string }[] = [
  * (docs/design-audit/*.md). Nav items beyond "My Puzzles" have no designed
  * screens in this iteration (spec.md Assumptions) and render disabled.
  */
-// "My Puzzles" covers the whole generate → solve → organize flow — per
-// docs/design-audit/puzzle-generation.md the generator screen itself shows
-// "My Puzzles" (not "Home") as the active nav pill.
-const MY_PUZZLES_SECTION = ["/generate", "/history", "/puzzle", "/folders", "/favorites"];
+// "/generate" is the Home screen (root "/" redirects there) — "My Puzzles"
+// covers the rest of the organize flow (history/puzzle/folders/favorites).
+const MY_PUZZLES_SECTION = ["/history", "/puzzle", "/folders", "/favorites"];
 
 const NAV_ITEMS = [
   { to: "/generate", label: "Home", enabled: true },
@@ -70,7 +69,9 @@ export function Layout({ children }: { children: ReactNode }) {
                   ? location.pathname.startsWith("/self-education") || inTrainingPuzzle
                   : item.label === "My Puzzles"
                     ? MY_PUZZLES_SECTION.some((p) => location.pathname.startsWith(p)) && !inTrainingPuzzle
-                    : false;
+                    : item.label === "Home"
+                      ? location.pathname.startsWith("/generate")
+                      : false;
               return (
                 <NavLink
                   key={item.label}

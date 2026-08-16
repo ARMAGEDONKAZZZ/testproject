@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthSplitLayout } from "./components/AuthSplitLayout";
-import { AgeGateStep, deriveAgeTier, type AgeTier } from "./components/AgeGateStep";
+import { AgeGateStep, type AgeTier } from "./components/AgeGateStep";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { toast } from "@/components/Toast";
@@ -263,7 +263,14 @@ export default function RegisterPage() {
   );
 }
 
-/** Wraps AgeGateStep with a required numeric age input before continuing. */
+// Registration only collects the age tier (FR-001) — no exact age prompt.
+// The backend still stores a numeric age (source of truth for
+// DeriveAgeTier, see auth/model.go), so each tier maps to a representative
+// age within its range; the user can correct it later from profile
+// settings (FR-045) once they're signed in.
+const TIER_REPRESENTATIVE_AGE: Record<AgeTier, number> = { child: 10, teen: 15, adult: 25 };
+
+/** Wraps AgeGateStep with the Далее button — tier selection only. */
 function AgeGateStepWithAge({
   onContinue,
 }: {
@@ -271,28 +278,16 @@ function AgeGateStepWithAge({
 }) {
   const { t } = useTranslation();
   const [tier, setTier] = useState<AgeTier | null>(null);
-  const [ageInput, setAgeInput] = useState("");
 
   return (
     <div className="space-y-4">
       <AgeGateStep selected={tier} onSelect={setTier} />
-      {tier && (
-        <Input
-          label={t("profile.age")}
-          type="number"
-          min={1}
-          max={120}
-          value={ageInput}
-          onChange={(e) => setAgeInput(e.target.value)}
-        />
-      )}
       <Button
         className="w-full"
-        disabled={!tier || !ageInput}
+        disabled={!tier}
         onClick={() => {
-          const ageValue = Number(ageInput);
-          const derived = deriveAgeTier(ageValue);
-          onContinue(derived, ageValue);
+          if (!tier) return;
+          onContinue(tier, TIER_REPRESENTATIVE_AGE[tier]);
         }}
       >
         {t("common.next")}

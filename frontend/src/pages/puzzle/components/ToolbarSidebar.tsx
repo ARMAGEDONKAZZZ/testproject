@@ -15,6 +15,7 @@ import { DownloadMenu } from "./DownloadMenu";
 interface ToolbarSidebarProps {
   puzzleId: string;
   fen: string;
+  orientation: "white" | "black";
   favorite: boolean;
   onToggleFavorite: () => void;
   onList: () => void;
@@ -62,7 +63,7 @@ export function ToolbarSidebar(props: ToolbarSidebarProps) {
       <ToolButton onClick={props.onList} label="Список">
         <List className="h-4 w-4" />
       </ToolButton>
-      <DownloadMenu puzzleId={props.puzzleId} fen={props.fen}>
+      <DownloadMenu puzzleId={props.puzzleId} fen={props.fen} orientation={props.orientation}>
         <button
           title="Скачать"
           aria-label="Скачать"

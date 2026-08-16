@@ -284,6 +284,7 @@ export default function PuzzlePage() {
         <ToolbarSidebar
           puzzleId={currentPuzzleId}
           fen={currentFen}
+          orientation={orientation}
           favorite={favorite}
           onToggleFavorite={() => {
             const next = !favorite;
@@ -317,46 +318,40 @@ export default function PuzzlePage() {
                   : undefined
             }
           >
-            <div className="flex items-center justify-center gap-3">
-              {hasSiblingNav && (
+            <div className="relative">
+              <ChessBoardView
+                fen={currentFen}
+                orientation={orientation}
+                interactive={outcome === "idle" && !regenerating}
+                onMove={(san, resultFen) => void handleMove(san, resultFen)}
+              />
+              {regenerating && <RegenerateOverlay />}
+            </div>
+
+            {hasSiblingNav && (
+              <div className="mt-3 flex items-center justify-center gap-3">
                 <button
                   type="button"
                   onClick={() => goToSibling(siblingIndex - 1)}
                   disabled={siblingIndex <= 0}
                   aria-label={t("selfEducation.previousPuzzle")}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-bg-elevated text-text-primary transition-colors hover:border-accent-green hover:text-accent-green disabled:opacity-30"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-bg-elevated text-text-primary transition-colors hover:border-accent-green hover:text-accent-green disabled:opacity-30"
                 >
-                  <ChevronLeft className="h-5 w-5" />
+                  <ChevronLeft className="h-4 w-4" />
                 </button>
-              )}
-
-              <div className="relative flex-1">
-                <ChessBoardView
-                  fen={currentFen}
-                  orientation={orientation}
-                  interactive={outcome === "idle" && !regenerating}
-                  onMove={(san, resultFen) => void handleMove(san, resultFen)}
-                />
-                {regenerating && <RegenerateOverlay />}
-              </div>
-
-              {hasSiblingNav && (
+                <span className="text-xs text-text-muted">
+                  {siblingIndex + 1} / {siblingIds!.length}
+                </span>
                 <button
                   type="button"
                   onClick={() => goToSibling(siblingIndex + 1)}
                   disabled={siblingIndex >= siblingIds!.length - 1}
                   aria-label="Следующая задача"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-bg-elevated text-text-primary transition-colors hover:border-accent-green hover:text-accent-green disabled:opacity-30"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-bg-elevated text-text-primary transition-colors hover:border-accent-green hover:text-accent-green disabled:opacity-30"
                 >
-                  <ChevronRight className="h-5 w-5" />
+                  <ChevronRight className="h-4 w-4" />
                 </button>
-              )}
-            </div>
-
-            {hasSiblingNav && (
-              <p className="mt-2 text-center text-xs text-text-muted">
-                {siblingIndex + 1} / {siblingIds!.length}
-              </p>
+              </div>
             )}
 
             {outcome === "correct" && (
