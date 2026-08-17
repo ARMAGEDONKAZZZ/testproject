@@ -16,15 +16,32 @@ import {
 
 type Step = "age" | "consent" | "email" | "code" | "nickname";
 
-const NICKNAME_SUGGESTIONS = [
-  "ChessKnight",
-  "PuzzleMaster",
-  "PawnKing",
-  "BraveRook",
-  "ChessNinja",
-  "LittleBishop",
-  "QueenMaster",
+// FR-005 in spec.md allows a custom-typed nickname as an alternative to the
+// suggestions — deliberately narrowed here per explicit product direction:
+// registration only offers system-generated picks, no free-text entry.
+const NICKNAME_PREFIXES = [
+  "Chess", "Pawn", "Rook", "Knight", "Bishop", "Queen", "King", "Brave",
+  "Swift", "Silent", "Grand", "Iron", "Shadow", "Royal", "Mighty", "Clever",
+  "Puzzle", "Tactic", "Little", "Storm",
 ];
+const NICKNAME_SUFFIXES = [
+  "Knight", "Master", "King", "Rook", "Bishop", "Ninja", "Wizard",
+  "Champion", "Hunter", "Guardian", "Star", "Blitz", "Ace", "Fox", "Wolf", "Player",
+];
+
+/** A fresh random batch each time — same pools, different combinations per registration. */
+function generateNicknameSuggestions(count: number): string[] {
+  const result = new Set<string>();
+  let guard = 0;
+  while (result.size < count && guard < 200) {
+    guard++;
+    const prefix = NICKNAME_PREFIXES[Math.floor(Math.random() * NICKNAME_PREFIXES.length)];
+    const suffix = NICKNAME_SUFFIXES[Math.floor(Math.random() * NICKNAME_SUFFIXES.length)];
+    if (prefix === suffix) continue;
+    result.add(prefix + suffix);
+  }
+  return Array.from(result);
+}
 
 export default function RegisterPage() {
   const { t } = useTranslation();
@@ -40,7 +57,6 @@ export default function RegisterPage() {
   const [code, setCode] = useState("");
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [codeSent, setCodeSent] = useState(false);
-  const [nickname, setNickname] = useState("");
 
   const registerStart = useRegisterStart();
   const registerCode = useRegisterCode();
@@ -226,31 +242,7 @@ export default function RegisterPage() {
       )}
 
       {step === "nickname" && (
-        <div className="mt-6 space-y-4">
-          <p className="text-xs uppercase tracking-wide text-text-muted">{t("auth.nicknameLabel")}</p>
-          <div className="flex flex-wrap gap-2">
-            {NICKNAME_SUGGESTIONS.map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setNickname(n)}
-                className={
-                  "rounded-full border px-3 py-1.5 text-sm " +
-                  (nickname === n
-                    ? "border-accent-green text-accent-green"
-                    : "border-border-subtle text-text-secondary")
-                }
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <Input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Свой никнейм" />
-          <p className="text-xs text-text-muted">{t("auth.nicknameHint")}</p>
-          <Button className="w-full" loading={registerNickname.isPending} onClick={() => void handleFinish(nickname)}>
-            {t("auth.register")}
-          </Button>
-        </div>
+        <NicknameStep onFinish={(n) => void handleFinish(n)} loading={registerNickname.isPending} />
       )}
 
       <p className="mt-6 text-center text-sm text-text-secondary">
@@ -269,6 +261,50 @@ export default function RegisterPage() {
 // age within its range; the user can correct it later from profile
 // settings (FR-045) once they're signed in.
 const TIER_REPRESENTATIVE_AGE: Record<AgeTier, number> = { child: 10, teen: 15, adult: 25 };
+
+/**
+ * Nickname picker — suggestions only, no free-text entry (deliberate,
+ * see NICKNAME_PREFIXES/SUFFIXES comment above). A fresh random batch is
+ * generated once per mount via useState's lazy initializer, so every time a
+ * user reaches this step in a fresh registration they see a new set.
+ */
+function NicknameStep({ onFinish, loading }: { onFinish: (nickname: string) => void; loading: boolean }) {
+  const { t } = useTranslation();
+  const [suggestions] = useState(() => generateNicknameSuggestions(7));
+  const [nickname, setNickname] = useState<string | null>(null);
+
+  return (
+    <div className="mt-6 space-y-4">
+      <p className="text-xs uppercase tracking-wide text-text-muted">{t("auth.nicknameLabel")}</p>
+      <div className="flex flex-wrap gap-2">
+        {suggestions.map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setNickname(n)}
+            className={
+              "rounded-full border px-3 py-1.5 text-sm " +
+              (nickname === n
+                ? "border-accent-green text-accent-green"
+                : "border-border-subtle text-text-secondary")
+            }
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+      <p className="text-xs text-text-muted">{t("auth.nicknameHint")}</p>
+      <Button
+        className="w-full"
+        disabled={!nickname}
+        loading={loading}
+        onClick={() => nickname && onFinish(nickname)}
+      >
+        {t("auth.register")}
+      </Button>
+    </div>
+  );
+}
 
 /** Wraps AgeGateStep with the Далее button — tier selection only. */
 function AgeGateStepWithAge({
