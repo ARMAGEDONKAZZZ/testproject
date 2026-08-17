@@ -114,19 +114,33 @@ func (s *Service) registrationContactEmail(ctx context.Context, userID uuid.UUID
 // SendCode issues and emails a one-time code for the given purpose,
 // enforcing a resend cooldown (FR-009) via the caller-supplied rate limiter
 // at the HTTP layer; this method only creates and sends the code.
-func (s *Service) SendCode(ctx context.Context, userID *uuid.UUID, email, purpose string) error {
+//
+// The returned devCode is non-empty only when SMTP_HOST is unset — the same
+// condition under which Mailer.SendCode already logs the code instead of
+// emailing it (this environment has no real mail server). Callers may
+// surface devCode straight to the client so testing doesn't require reading
+// server logs; the moment SMTP is configured for a real deployment, this
+// self-gates back to empty automatically, so there is no separate
+// "test mode" flag to remember to flip off.
+func (s *Service) SendCode(ctx context.Context, userID *uuid.UUID, email, purpose string) (devCode string, err error) {
 	code := generateNumericCode()
 	hash := hashCode(code)
 	if err := s.repo.CreateVerificationCode(ctx, userID, email, purpose, hash, 10*time.Minute); err != nil {
-		return err
+		return "", err
 	}
-	return s.mailer.SendCode(email, purpose, code)
+	if err := s.mailer.SendCode(email, purpose, code); err != nil {
+		return "", err
+	}
+	if s.cfg.SMTPHost == "" {
+		return code, nil
+	}
+	return "", nil
 }
 
-func (s *Service) SendRegistrationCode(ctx context.Context, userID uuid.UUID) error {
+func (s *Service) SendRegistrationCode(ctx context.Context, userID uuid.UUID) (string, error) {
 	email, err := s.registrationContactEmail(ctx, userID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	return s.SendCode(ctx, &userID, email, "registration")
 }
@@ -301,7 +315,8 @@ func (s *Service) StartPasswordReset(ctx context.Context, email string) error {
 		// Deliberately no error surfaced to caller: avoid email enumeration.
 		return nil
 	}
-	return s.SendCode(ctx, &user.ID, email, "password_reset")
+	_, err = s.SendCode(ctx, &user.ID, email, "password_reset")
+	return err
 }
 
 func (s *Service) CompletePasswordReset(ctx context.Context, email, code, newPassword string) error {

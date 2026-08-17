@@ -71,11 +71,16 @@ func (h *Handlers) RegisterCode(w http.ResponseWriter, r *http.Request) {
 			"Код уже отправлен, повторите попытку немного позже.", nil)
 		return
 	}
-	if err := h.service.SendRegistrationCode(r.Context(), req.RegistrationID); err != nil {
+	devCode, err := h.service.SendRegistrationCode(r.Context(), req.RegistrationID)
+	if err != nil {
 		httpserver.WriteInternalError(w, err)
 		return
 	}
-	httpserver.WriteJSON(w, http.StatusAccepted, map[string]any{})
+	data := map[string]any{}
+	if devCode != "" {
+		data["devCode"] = devCode
+	}
+	httpserver.WriteJSON(w, http.StatusAccepted, data)
 }
 
 type registerVerifyRequest struct {

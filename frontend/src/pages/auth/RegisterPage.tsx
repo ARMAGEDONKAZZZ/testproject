@@ -5,6 +5,7 @@ import { AuthSplitLayout } from "./components/AuthSplitLayout";
 import { AgeGateStep, type AgeTier } from "./components/AgeGateStep";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
+import { Modal } from "@/components/Modal";
 import { toast } from "@/components/Toast";
 import { ApiError } from "@/api/client";
 import {
@@ -57,6 +58,10 @@ export default function RegisterPage() {
   const [code, setCode] = useState("");
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [codeSent, setCodeSent] = useState(false);
+  // Set only when the backend has no SMTP configured (this test env) and
+  // echoes the code back instead of actually emailing it — see
+  // useRegisterCode. Never populated against a real mail server.
+  const [devCode, setDevCode] = useState<string | null>(null);
 
   const registerStart = useRegisterStart();
   const registerCode = useRegisterCode();
@@ -81,8 +86,12 @@ export default function RegisterPage() {
       });
       setRegistrationId(res.registrationId);
       setStep("code");
-      await registerCode.mutateAsync(res.registrationId);
+      const codeRes = await registerCode.mutateAsync(res.registrationId);
       setCodeSent(true);
+      if (codeRes.devCode) {
+        setCode(codeRes.devCode);
+        setDevCode(codeRes.devCode);
+      }
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : t("common.errorGeneric"));
     }
@@ -105,9 +114,14 @@ export default function RegisterPage() {
   async function handleGetCode() {
     if (!registrationId) return;
     try {
-      await registerCode.mutateAsync(registrationId);
+      const res = await registerCode.mutateAsync(registrationId);
       setCodeSent(true);
-      toast.success(t("auth.codeSentBanner"));
+      if (res.devCode) {
+        setCode(res.devCode);
+        setDevCode(res.devCode);
+      } else {
+        toast.success(t("auth.codeSentBanner"));
+      }
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : t("common.errorGeneric"));
     }
@@ -251,6 +265,16 @@ export default function RegisterPage() {
           {t("auth.login")}
         </Link>
       </p>
+
+      <Modal open={!!devCode} onOpenChange={(open) => !open && setDevCode(null)} title="Тестовый режим: email не подключён">
+        <p className="text-sm text-text-secondary">
+          Почта на этом окружении не настроена, поэтому код ниже вместо письма — он уже подставлен в поле «Код».
+        </p>
+        <p className="mt-4 text-center font-mono text-3xl font-bold tracking-[0.3em] text-accent-green">{devCode}</p>
+        <Button className="mt-4 w-full" onClick={() => setDevCode(null)}>
+          Понятно
+        </Button>
+      </Modal>
     </AuthSplitLayout>
   );
 }

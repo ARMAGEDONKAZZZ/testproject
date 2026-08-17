@@ -62,6 +62,44 @@ func (h *Handlers) GetBySlug(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type checkGuestMoveRequest struct {
+	Move string `json:"move"`
+}
+
+// POST /share/:slug/puzzles/:puzzleId/check-move — Public, no
+// authMiddleware, same X-Share-Password gate as GetBySlug. Backs the guest
+// solving view (figma/"Задача веб вью по ссылке.svg"): validates a move
+// server-side without ever sending the solution to the client, but persists
+// nothing (see Service.CheckGuestMove).
+func (h *Handlers) CheckGuestMove(w http.ResponseWriter, r *http.Request) {
+	slug := chi.URLParam(r, "slug")
+	password := r.Header.Get("X-Share-Password")
+	puzzleID, err := uuid.Parse(chi.URLParam(r, "puzzleId"))
+	if err != nil {
+		httpserver.WriteValidationError(w, "Некорректный идентификатор задачи", nil)
+		return
+	}
+	var req checkGuestMoveRequest
+	if !httpserver.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	correct, err := h.service.CheckGuestMove(r.Context(), slug, password, puzzleID, req.Move)
+	if errors.Is(err, ErrPasswordRequired) {
+		httpserver.WriteError(w, http.StatusUnauthorized, httpserver.ErrorCode("PASSWORD_REQUIRED"), "Для просмотра требуется пароль", nil)
+		return
+	}
+	if errors.Is(err, ErrNotFound) {
+		httpserver.WriteNotFound(w, "Задача не найдена или недоступна")
+		return
+	}
+	if err != nil {
+		httpserver.WriteInternalError(w, err)
+		return
+	}
+	httpserver.WriteJSON(w, http.StatusOK, map[string]any{"correct": correct})
+}
+
 // GET /favorites — Bearer required. FR-039/FR-040.
 func (h *Handlers) ListFavorites(w http.ResponseWriter, r *http.Request) {
 	userID, ok := callerID(w, r)

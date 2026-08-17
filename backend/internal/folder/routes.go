@@ -16,6 +16,7 @@ func RegisterRoutes(api chi.Router, authMiddleware func(http.Handler) http.Handl
 	h := deps.Handlers
 
 	api.Get("/share/{slug}", h.GetBySlug)
+	api.Post("/share/{slug}/puzzles/{puzzleId}/check-move", h.CheckGuestMove)
 
 	api.Group(func(r chi.Router) {
 		r.Use(authMiddleware)

@@ -19,6 +19,7 @@ const FavoritesPage = lazy(() => import("@/pages/favorites/FavoritesPage"));
 const ProfilePage = lazy(() => import("@/pages/profile/ProfilePage"));
 const BoardDesignPage = lazy(() => import("@/pages/profile/BoardDesignPage"));
 const SharedFolderPage = lazy(() => import("@/pages/share/SharedFolderPage"));
+const SharedPuzzlePage = lazy(() => import("@/pages/share/SharedPuzzlePage"));
 
 function PageFallback() {
   return (
@@ -75,6 +76,7 @@ export function App() {
 
         {/* Public share view */}
         <Route path="/share/:slug" element={<SharedFolderPage />} />
+        <Route path="/share/:slug/:puzzleId" element={<SharedPuzzlePage />} />
 
         {/* Authenticated app */}
         <Route path="/generate" element={<Authenticated><GeneratePage /></Authenticated>} />

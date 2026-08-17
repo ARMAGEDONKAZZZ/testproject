@@ -99,3 +99,21 @@ export function useSharedFolder(slug: string | undefined, password?: string) {
     retry: false,
   });
 }
+
+/**
+ * Guest move check for the public single-puzzle web view (figma/"Задача
+ * веб вью по ссылке.svg"): validates a move against the real solution
+ * server-side (POST /share/:slug/puzzles/:puzzleId/check-move) without ever
+ * sending the solution to the client — but, unlike the authenticated
+ * attempts/moves pipeline, nothing is persisted for a guest.
+ */
+export function useCheckGuestMove(slug: string | undefined, password?: string) {
+  return useMutation({
+    mutationFn: ({ puzzleId, move }: { puzzleId: string; move: string }) =>
+      api.post<{ correct: boolean }>(
+        `/share/${slug}/puzzles/${puzzleId}/check-move`,
+        { move },
+        { skipAuth: true, headers: password ? { "X-Share-Password": password } : undefined },
+      ),
+  });
+}

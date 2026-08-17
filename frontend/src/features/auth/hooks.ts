@@ -19,8 +19,12 @@ export function useRegisterStart() {
 
 export function useRegisterCode() {
   return useMutation({
+    // devCode is only present when SMTP isn't configured server-side (see
+    // internal/auth/service.go SendCode) — this environment currently has
+    // no real mail server, so the code never reaches a real inbox unless
+    // surfaced here.
     mutationFn: (registrationId: string) =>
-      api.post<Record<string, never>>("/auth/register/code", { registrationId }, { skipAuth: true }),
+      api.post<{ devCode?: string }>("/auth/register/code", { registrationId }, { skipAuth: true }),
   });
 }
 

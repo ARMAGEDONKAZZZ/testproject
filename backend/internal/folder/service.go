@@ -284,3 +284,31 @@ func (s *Service) GetBySlug(ctx context.Context, slug, providedPassword string) 
 	}
 	return f, items, nil
 }
+
+// CheckGuestMove validates a move against puzzleID's solution for a guest
+// viewing it through a public share link (figma/"Задача веб вью по
+// ссылке.svg"). Guest attempts are stateless by design — nothing is
+// persisted, no solve_attempts row, no skill_profiles bump — the puzzle
+// screen's own CTA ("Зарегистрируйтесь, чтобы отслеживать прогресс...") is
+// the point: an account is what turns a solve into tracked progress.
+// Re-derives the slug/password/visibility gate independently rather than
+// trusting a prior GetBySlug call, since this is a separate request.
+func (s *Service) CheckGuestMove(ctx context.Context, slug, providedPassword string, puzzleID uuid.UUID, move string) (bool, error) {
+	f, err := s.repo.GetFolderBySlug(ctx, slug)
+	if err != nil {
+		return false, ErrNotFound
+	}
+	if f.Visibility != VisibilityPublic {
+		return false, ErrNotFound
+	}
+	if f.SharePasswordHash != nil {
+		if err := bcrypt.CompareHashAndPassword([]byte(*f.SharePasswordHash), []byte(providedPassword)); err != nil {
+			return false, ErrPasswordRequired
+		}
+	}
+	solution, err := s.repo.GetPuzzleSolutionFirstMove(ctx, f.ID, puzzleID)
+	if err != nil {
+		return false, err
+	}
+	return strings.EqualFold(strings.TrimSpace(move), strings.TrimSpace(solution)), nil
+}

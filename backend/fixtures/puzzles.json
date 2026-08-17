@@ -136,11 +136,11 @@
     "fen": "4k3/P7/8/8/8/8/8/4K3 w - - 0 1",
     "sideToMove": "white",
     "objective": "Проведите пешку в ферзи",
-    "solutionLine": ["a8=Q"],
+    "solutionLine": ["a8=Q+"],
     "tag": "endgame",
     "description": "Пешке ничто не мешает — простое превращение в ферзя решает партию.",
     "difficulty": 1,
     "simplifiesTo": null,
-    "mockEval": { "evaluation": "+8.0", "bestMove": "a8=Q", "depth": 6 }
+    "mockEval": { "evaluation": "+8.0", "bestMove": "a8=Q+", "depth": 6 }
   }
 ]
