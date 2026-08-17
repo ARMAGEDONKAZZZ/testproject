@@ -55,4 +55,6 @@ export {
   CreditCard,
   Mail,
   Bell,
+  GraduationCap,
+  Presentation,
 } from "lucide-react";

@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/Button";
 import { Mascot } from "@/components/Mascot";
 import { Pill } from "@/components/Pill";
+import { GraduationCap, Presentation } from "@/components/icons";
 import { SkillsPentagon } from "@/pages/profile/components/SkillsPentagon";
 import { ChessBoardView } from "@/pages/puzzle/components/ChessBoardView";
 import { useMe, useUpdateOnboarding } from "@/features/profile/hooks";
@@ -59,18 +60,30 @@ export function OnboardingWizard() {
             <h2 className="text-center text-lg font-semibold text-text-primary">{t("onboarding.wizard.roleTitle")}</h2>
             <p className="mt-1 text-center text-sm text-text-secondary">{t("onboarding.wizard.roleBody")}</p>
             <div className="mt-4 flex gap-3">
-              {(["student", "teacher"] as Role[]).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setRole(r)}
-                  className={`flex-1 rounded-xl border p-3 text-center text-sm ${
-                    role === r ? "border-accent-green bg-accent-green/10 text-accent-green" : "border-border-subtle text-text-secondary"
-                  }`}
-                >
-                  {t(r === "student" ? "onboarding.wizard.roleStudent" : "onboarding.wizard.roleTeacher")}
-                </button>
-              ))}
+              {(["student", "teacher"] as Role[]).map((r) => {
+                const RoleIcon = r === "student" ? GraduationCap : Presentation;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    className={`flex flex-1 flex-col items-center gap-2 rounded-xl border p-4 text-center text-sm ${
+                      role === r
+                        ? "border-accent-green bg-accent-green/10 text-accent-green"
+                        : "border-border-subtle text-text-secondary"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                        role === r ? "bg-accent-green/20" : "bg-bg-elevated"
+                      }`}
+                    >
+                      <RoleIcon className="h-6 w-6" />
+                    </span>
+                    {t(r === "student" ? "onboarding.wizard.roleStudent" : "onboarding.wizard.roleTeacher")}
+                  </button>
+                );
+              })}
             </div>
             <div className="mt-4 flex items-center justify-between">
               <button onClick={() => finish()} className="text-sm text-text-muted hover:text-text-secondary">

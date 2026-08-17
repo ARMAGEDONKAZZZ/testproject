@@ -7,17 +7,24 @@
 export function RecommendedCard({
   label,
   selected,
+  highlight,
   onClick,
 }: {
   label: string;
   selected: boolean;
+  /** Onboarding home-tour step 3 points at these cards — see useHomeTour. */
+  highlight?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
       className={`group relative aspect-square overflow-hidden rounded-2xl border text-left transition-colors ${
-        selected ? "border-accent-violet" : "border-border-subtle hover:border-accent-violet/60"
+        highlight
+          ? "border-accent-green shadow-[0_0_0_3px_rgba(34,197,94,0.4)]"
+          : selected
+            ? "border-accent-violet"
+            : "border-border-subtle hover:border-accent-violet/60"
       }`}
       style={{
         backgroundImage:

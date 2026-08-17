@@ -14,6 +14,7 @@ import { PuzzleCarousel } from "./components/PuzzleCarousel";
 import { PuzzleActionBar } from "./components/PuzzleActionBar";
 import { AttachMenu } from "./components/AttachMenu";
 import { HomeOnboardingTour } from "@/features/onboarding/HomeOnboardingTour";
+import { useHomeTour } from "@/features/onboarding/useHomeTour";
 import {
   useCreateGeneration,
   useGeneration,
@@ -63,6 +64,7 @@ export default function GeneratePage() {
   const regenerate = useRegeneratePuzzle();
   const generateFromFen = useGenerateFromFEN();
   const generation = useGeneration(generationId);
+  const homeTour = useHomeTour();
 
   async function handleSubmit() {
     if (!text.trim() && !selectedTag && !attachment) {
@@ -154,6 +156,7 @@ export default function GeneratePage() {
                       key={item.label}
                       label={item.label}
                       selected={selectedTag === item.tag && text === item.label}
+                      highlight={homeTour.active && homeTour.step === 2}
                       onClick={() => pickRecommended(item.label, item.tag)}
                     />
                   ))}
@@ -272,7 +275,13 @@ export default function GeneratePage() {
 
       <Card>
         <div className="flex items-center gap-2">
-          <div className="flex flex-1 items-center gap-2 rounded-xl border border-border-subtle bg-bg-tertiary px-3 py-2">
+          <div
+            className={`flex flex-1 items-center gap-2 rounded-xl border bg-bg-tertiary px-3 py-2 transition-shadow ${
+              homeTour.active && homeTour.step === 1
+                ? "border-accent-green shadow-[0_0_0_3px_rgba(34,197,94,0.4)]"
+                : "border-border-subtle"
+            }`}
+          >
             <AttachMenu
               onAttachPgn={attachPgn}
               onAttachImage={attachImage}
@@ -378,7 +387,7 @@ export default function GeneratePage() {
         </div>
       </Card>
       </div>
-      <HomeOnboardingTour />
+      {homeTour.active && <HomeOnboardingTour step={homeTour.step} onNext={homeTour.next} onSkip={homeTour.finish} />}
     </div>
   );
 }
