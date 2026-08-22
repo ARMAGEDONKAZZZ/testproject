@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { Chess } from "chess.js";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -36,11 +37,16 @@ export default function SharedPuzzlePage() {
   const puzzle = index >= 0 ? items[index] : undefined;
 
   const [currentFen, setCurrentFen] = useState<string | null>(null);
-  const [outcome, setOutcome] = useState<"idle" | "correct" | "incorrect">("idle");
+  // "opponent-moving": correct move, not the final ply — see PuzzlePage.tsx
+  // for the authenticated equivalent of this same multi-move flow.
+  const [outcome, setOutcome] = useState<"idle" | "correct" | "incorrect" | "opponent-moving">("idle");
   const [orientation, setOrientation] = useState<"white" | "black">("white");
   const [listOpen, setListOpen] = useState(false);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [timerRunning, setTimerRunning] = useState(true);
+  // Guest checks are stateless server-side (no attempt row) — the client
+  // tracks its own position in the solution line and sends it every call.
+  const [moveIndex, setMoveIndex] = useState(0);
 
   useEffect(() => {
     if (!puzzle) return;
@@ -49,6 +55,7 @@ export default function SharedPuzzlePage() {
     setOutcome("idle");
     setElapsedSec(0);
     setTimerRunning(true);
+    setMoveIndex(0);
   }, [puzzle?.id]);
 
   useEffect(() => {
@@ -57,17 +64,43 @@ export default function SharedPuzzlePage() {
     return () => clearInterval(id);
   }, [timerRunning, outcome]);
 
-  async function handleMove(san: string, resultFen: string) {
+  async function handleMove(move: string, resultFen: string) {
     if (!puzzle || !slug) return;
     try {
-      const res = await checkMove.mutateAsync({ puzzleId: puzzle.id, move: san });
-      if (res.correct) {
-        setOutcome("correct");
-        setCurrentFen(resultFen);
-      } else {
+      const res = await checkMove.mutateAsync({ puzzleId: puzzle.id, move, moveIndex });
+      if (!res.correct) {
         setOutcome("incorrect");
         setCurrentFen(puzzle.fen);
+        return;
       }
+
+      setCurrentFen(resultFen);
+
+      if (res.opponentMove) {
+        setOutcome("opponent-moving");
+        const opponentMove = res.opponentMove;
+        setMoveIndex((i) => i + 2);
+        setTimeout(() => {
+          setCurrentFen((fen) => {
+            if (!fen) return fen;
+            try {
+              const game = new Chess(fen);
+              const move = game.move({
+                from: opponentMove.slice(0, 2),
+                to: opponentMove.slice(2, 4),
+                promotion: opponentMove.length > 4 ? opponentMove.slice(4) : undefined,
+              });
+              return move ? game.fen() : fen;
+            } catch {
+              return fen;
+            }
+          });
+          setOutcome("idle");
+        }, 600);
+        return;
+      }
+
+      setOutcome("correct");
     } catch {
       toast.error("Не удалось проверить ход. Попробуйте ещё раз.");
     }
@@ -77,6 +110,7 @@ export default function SharedPuzzlePage() {
     if (!puzzle) return;
     setCurrentFen(puzzle.fen);
     setOutcome("idle");
+    setMoveIndex(0);
   }
 
   function goToSibling(newIndex: number) {
@@ -179,7 +213,11 @@ export default function SharedPuzzlePage() {
               <div className="flex-1">
                 <Card
                   className={
-                    outcome === "correct" ? "border-accent-green" : outcome === "incorrect" ? "border-danger" : undefined
+                    outcome === "correct" || outcome === "opponent-moving"
+                      ? "border-accent-green"
+                      : outcome === "incorrect"
+                        ? "border-danger"
+                        : undefined
                   }
                 >
                   <div className="flex items-center justify-center gap-3">
@@ -198,7 +236,7 @@ export default function SharedPuzzlePage() {
                         fen={currentFen}
                         orientation={orientation}
                         interactive={outcome === "idle"}
-                        onMove={(san, resultFen) => void handleMove(san, resultFen)}
+                        onMove={(move, resultFen) => void handleMove(move, resultFen)}
                       />
                     </div>
                     {items.length > 1 && (
@@ -212,6 +250,10 @@ export default function SharedPuzzlePage() {
                       </button>
                     )}
                   </div>
+
+                  {outcome === "opponent-moving" && (
+                    <p className="mt-3 text-center text-sm text-accent-green">Соперник отвечает…</p>
+                  )}
 
                   <div className="mt-3 flex items-center justify-center gap-3 text-sm text-text-secondary">
                     <Pill tone="neutral">{puzzle.sideToMove === "white" ? "White to move" : "Black to move"}</Pill>

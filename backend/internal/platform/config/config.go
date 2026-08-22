@@ -23,6 +23,9 @@ type Config struct {
 	SMTPUser          string
 	SMTPPassword      string
 	SMTPFrom          string
+	PuzzleAPIBaseURL  string
+	PuzzleAPIEmail    string
+	PuzzleAPIPassword string
 }
 
 // Load reads configuration from the environment. Required variables missing at
@@ -39,11 +42,17 @@ func Load() (Config, error) {
 		// the real deployed origin (e.g. https://testproject-sz4h.onrender.com)
 		// in production.
 		PublicBaseURL: getEnvDefault("PUBLIC_BASE_URL", "http://localhost:5173"),
-		SMTPHost:          os.Getenv("SMTP_HOST"),
-		SMTPPort:          getEnvDefault("SMTP_PORT", "1025"),
-		SMTPUser:          os.Getenv("SMTP_USER"),
-		SMTPPassword:      os.Getenv("SMTP_PASSWORD"),
-		SMTPFrom:          getEnvDefault("SMTP_FROM", "no-reply@neuratop.com"),
+		SMTPHost:      os.Getenv("SMTP_HOST"),
+		SMTPPort:      getEnvDefault("SMTP_PORT", "1025"),
+		SMTPUser:      os.Getenv("SMTP_USER"),
+		SMTPPassword:  os.Getenv("SMTP_PASSWORD"),
+		SMTPFrom:      getEnvDefault("SMTP_FROM", "no-reply@neuratop.com"),
+		// PuzzleAPI* are optional: when PuzzleAPIEmail/Password are unset,
+		// generation falls back to the fixture-backed MockGenerator (same
+		// self-gating pattern as SMTPHost) — see internal/generation/deps.go.
+		PuzzleAPIBaseURL:  getEnvDefault("PUZZLE_API_BASE_URL", "https://api-go-dev.neuratrap.com"),
+		PuzzleAPIEmail:    os.Getenv("PUZZLE_API_EMAIL"),
+		PuzzleAPIPassword: os.Getenv("PUZZLE_API_PASSWORD"),
 	}
 
 	if cfg.DatabaseURL == "" {

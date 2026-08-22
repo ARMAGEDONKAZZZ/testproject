@@ -48,7 +48,7 @@ func main() {
 	authDeps := auth.NewDeps(pool, cfg, accessIssuer)
 	auth.RegisterRoutes(api, authMiddleware, authDeps)
 
-	generationDeps := generation.NewDeps(pool)
+	generationDeps := generation.NewDeps(pool, cfg.PuzzleAPIBaseURL, cfg.PuzzleAPIEmail, cfg.PuzzleAPIPassword)
 	generation.RegisterRoutes(api, authMiddleware, generationDeps)
 
 	puzzleDeps := puzzle.NewDeps(pool, generationDeps.Fixtures())

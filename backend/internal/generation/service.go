@@ -22,10 +22,10 @@ var (
 
 type Service struct {
 	repo      *Repository
-	generator *MockGenerator
+	generator Generator
 }
 
-func NewService(repo *Repository, generator *MockGenerator) *Service {
+func NewService(repo *Repository, generator Generator) *Service {
 	return &Service{repo: repo, generator: generator}
 }
 
@@ -71,7 +71,7 @@ func (s *Service) CreateGeneration(ctx context.Context, in CreateGenerationInput
 	return g, nil
 }
 
-// runAsync performs the mock generation in the background, using a detached
+// runAsync performs the generation in the background, using a detached
 // context (the originating HTTP request has already returned by the time
 // this runs). The short artificial delay gives the frontend's multi-step
 // progress UI (FR-016: fetching patterns -> calibrating difficulty ->
@@ -85,7 +85,7 @@ func (s *Service) runAsync(generationID, ownerUserID uuid.UUID, inputMode, paylo
 
 		_, err := s.generator.Generate(ctx, ownerUserID, generationID, inputMode, payload, count)
 		if err != nil {
-			slog.Error("generation: mock generation failed", "error", err, "generationId", generationID)
+			slog.Error("generation: puzzle generation failed", "error", err, "generationId", generationID)
 			msg := "Не удалось сгенерировать задачи. Попробуйте ещё раз."
 			if updErr := s.repo.UpdateStatus(ctx, generationID, StatusFailed, &msg); updErr != nil {
 				slog.Error("generation: failed to mark generation failed", "error", updErr, "generationId", generationID)

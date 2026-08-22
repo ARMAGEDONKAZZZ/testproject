@@ -293,22 +293,40 @@ func (s *Service) GetBySlug(ctx context.Context, slug, providedPassword string) 
 // the point: an account is what turns a solve into tracked progress.
 // Re-derives the slug/password/visibility gate independently rather than
 // trusting a prior GetBySlug call, since this is a separate request.
-func (s *Service) CheckGuestMove(ctx context.Context, slug, providedPassword string, puzzleID uuid.UUID, move string) (bool, error) {
+//
+// Because there's no attempt row to hold progress (unlike the authenticated
+// SubmitMove flow, internal/puzzle/service.go), the caller tracks its own
+// position in the solution_line and sends it as moveIndex on every request —
+// this endpoint just answers "is this move correct at this ply", returning
+// the forced opponent reply (if any) for the client to auto-play and advance
+// past, the same shape as the authenticated flow.
+func (s *Service) CheckGuestMove(ctx context.Context, slug, providedPassword string, puzzleID uuid.UUID, moveIndex int, move string) (correct bool, opponentMove string, err error) {
 	f, err := s.repo.GetFolderBySlug(ctx, slug)
 	if err != nil {
-		return false, ErrNotFound
+		return false, "", ErrNotFound
 	}
 	if f.Visibility != VisibilityPublic {
-		return false, ErrNotFound
+		return false, "", ErrNotFound
 	}
 	if f.SharePasswordHash != nil {
 		if err := bcrypt.CompareHashAndPassword([]byte(*f.SharePasswordHash), []byte(providedPassword)); err != nil {
-			return false, ErrPasswordRequired
+			return false, "", ErrPasswordRequired
 		}
 	}
-	solution, err := s.repo.GetPuzzleSolutionFirstMove(ctx, f.ID, puzzleID)
+	solutionLine, err := s.repo.GetPuzzleSolutionLine(ctx, f.ID, puzzleID)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
-	return strings.EqualFold(strings.TrimSpace(move), strings.TrimSpace(solution)), nil
+	if moveIndex < 0 || moveIndex >= len(solutionLine) {
+		return false, "", nil
+	}
+	correct = strings.EqualFold(strings.TrimSpace(move), strings.TrimSpace(solutionLine[moveIndex]))
+	if !correct {
+		return false, "", nil
+	}
+	nextIdx := moveIndex + 1
+	if nextIdx >= len(solutionLine) {
+		return true, "", nil // final ply — solved
+	}
+	return true, solutionLine[nextIdx], nil
 }

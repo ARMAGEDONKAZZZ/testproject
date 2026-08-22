@@ -80,13 +80,21 @@ func (s *Service) StartAttempt(ctx context.Context, userID, puzzleID uuid.UUID) 
 type MoveResult struct {
 	Correct bool
 	Outcome string
+	// OpponentMove is the forced reply (UCI, e.g. "h6h5") the caller should
+	// auto-play before accepting the player's next move — set only when
+	// Correct is true and solution_line has more plies after it. Empty when
+	// the move was wrong, or when it was the last ply (Outcome == "solved").
+	OpponentMove string
 }
 
-// SubmitMove compares move against the puzzle's solution_line (FR-024).
-// Every fixture's solution is a single move (see fixtures/puzzles.json), so
-// per the task brief "solved" simply means the submitted move matches the
-// first (only) element of solution_line — there is no multi-ply move
-// sequencing to track here.
+// SubmitMove compares move against the next expected ply of the puzzle's
+// solution_line, solutionLine[attempt.SolutionIndex] — not always index 0,
+// since solution_line can now hold a multi-ply sequence (solver move,
+// forced opponent reply, solver move, ...; see
+// internal/generation/api_generator.go). A correct move that isn't the last
+// ply advances past the following forced opponent reply too and hands it
+// back as OpponentMove for the caller to auto-play; the puzzle is "solved"
+// (FR-024) only once the player has correctly played the final ply.
 func (s *Service) SubmitMove(ctx context.Context, attemptID uuid.UUID, move string) (MoveResult, error) {
 	attempt, err := s.repo.GetAttemptByID(ctx, attemptID)
 	if err != nil {
@@ -97,19 +105,26 @@ func (s *Service) SubmitMove(ctx context.Context, attemptID uuid.UUID, move stri
 		return MoveResult{}, err
 	}
 
-	correct := len(solutionLine) > 0 &&
-		strings.EqualFold(strings.TrimSpace(move), strings.TrimSpace(solutionLine[0]))
+	idx := int(attempt.SolutionIndex)
+	correct := idx < len(solutionLine) &&
+		strings.EqualFold(strings.TrimSpace(move), strings.TrimSpace(solutionLine[idx]))
 
 	if err := s.repo.AppendMove(ctx, attemptID, MoveRecord{Move: move, Correct: correct}); err != nil {
 		return MoveResult{}, err
 	}
 
-	outcome := attempt.Outcome
-	if correct && attempt.Outcome == OutcomeInProgress {
+	result := MoveResult{Correct: correct, Outcome: attempt.Outcome}
+	if !correct || attempt.Outcome != OutcomeInProgress {
+		return result, nil
+	}
+
+	nextIdx := idx + 1
+	if nextIdx >= len(solutionLine) {
+		// That was the final ply.
 		if err := s.repo.MarkSolved(ctx, attemptID); err != nil {
 			return MoveResult{}, err
 		}
-		outcome = OutcomeSolved
+		result.Outcome = OutcomeSolved
 
 		// Real skill-progress signal (docs/design-audit/self-education.md
 		// "Реализация"): solving unaided nudges the matching skill_profiles
@@ -118,8 +133,17 @@ func (s *Service) SubmitMove(ctx context.Context, attemptID uuid.UUID, move stri
 		if tag, err := s.repo.getPuzzleTag(ctx, attempt.PuzzleID); err == nil {
 			_ = s.repo.BumpSkillAxis(ctx, attempt.UserID, tag, SkillAxisDeltaSolved)
 		}
+		return result, nil
 	}
-	return MoveResult{Correct: correct, Outcome: outcome}, nil
+
+	// There's a forced opponent reply at nextIdx; the player's next move
+	// (if any) is the ply after that.
+	advanceTo := nextIdx + 1
+	if err := s.repo.AdvanceSolutionIndex(ctx, attemptID, int16(advanceTo)); err != nil {
+		return MoveResult{}, err
+	}
+	result.OpponentMove = solutionLine[nextIdx]
+	return result, nil
 }
 
 // Simplify implements FR-026's "Упростить задачу": bounded by SimplifyLimit,
@@ -222,7 +246,7 @@ func (s *Service) RequestHint(ctx context.Context, attemptID uuid.UUID) (hint st
 	if err != nil {
 		return "", 0, err
 	}
-	hintText := buildPartialHint(solutionLine)
+	hintText := buildPartialHint(solutionLine, int(attempt.SolutionIndex))
 
 	newCount, err := s.repo.IncrementHintsUsed(ctx, attemptID)
 	if err != nil {
@@ -234,15 +258,16 @@ func (s *Service) RequestHint(ctx context.Context, attemptID uuid.UUID) (hint st
 	return hintText, newCount, nil
 }
 
-// buildPartialHint gives a nudge — the destination square of the first
-// solution move — without revealing the move (piece, capture, check/mate
-// markers) outright, per FR-027's intent that a hint should help, not
-// solve, the puzzle.
-func buildPartialHint(solutionLine []string) string {
-	if len(solutionLine) == 0 {
+// buildPartialHint gives a nudge — the destination square of the next
+// expected solution move (solutionLine[idx], the player's current ply, not
+// necessarily the first) — without revealing the move (piece, capture,
+// check/mate markers) outright, per FR-027's intent that a hint should
+// help, not solve, the puzzle.
+func buildPartialHint(solutionLine []string, idx int) string {
+	if idx < 0 || idx >= len(solutionLine) {
 		return "Присмотритесь внимательнее к позиции — решающий ход где-то рядом."
 	}
-	dest := destinationSquare(solutionLine[0])
+	dest := destinationSquare(solutionLine[idx])
 	if dest == "" {
 		return "Обратите внимание на самую активную фигуру в этой позиции."
 	}

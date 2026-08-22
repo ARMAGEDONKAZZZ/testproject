@@ -101,8 +101,9 @@ func (h *Handlers) SubmitMove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpserver.WriteJSON(w, http.StatusOK, map[string]any{
-		"correct": result.Correct,
-		"outcome": result.Outcome,
+		"correct":      result.Correct,
+		"outcome":      result.Outcome,
+		"opponentMove": result.OpponentMove,
 	})
 }
 

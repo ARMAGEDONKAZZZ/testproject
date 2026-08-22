@@ -63,7 +63,8 @@ func (h *Handlers) GetBySlug(w http.ResponseWriter, r *http.Request) {
 }
 
 type checkGuestMoveRequest struct {
-	Move string `json:"move"`
+	Move      string `json:"move"`
+	MoveIndex int    `json:"moveIndex"` // which ply of solution_line this move is for; omitted/0 for the first move
 }
 
 // POST /share/:slug/puzzles/:puzzleId/check-move — Public, no
@@ -84,7 +85,7 @@ func (h *Handlers) CheckGuestMove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	correct, err := h.service.CheckGuestMove(r.Context(), slug, password, puzzleID, req.Move)
+	correct, opponentMove, err := h.service.CheckGuestMove(r.Context(), slug, password, puzzleID, req.MoveIndex, req.Move)
 	if errors.Is(err, ErrPasswordRequired) {
 		httpserver.WriteError(w, http.StatusUnauthorized, httpserver.ErrorCode("PASSWORD_REQUIRED"), "Для просмотра требуется пароль", nil)
 		return
@@ -97,7 +98,7 @@ func (h *Handlers) CheckGuestMove(w http.ResponseWriter, r *http.Request) {
 		httpserver.WriteInternalError(w, err)
 		return
 	}
-	httpserver.WriteJSON(w, http.StatusOK, map[string]any{"correct": correct})
+	httpserver.WriteJSON(w, http.StatusOK, map[string]any{"correct": correct, "opponentMove": opponentMove})
 }
 
 // GET /favorites — Bearer required. FR-039/FR-040.

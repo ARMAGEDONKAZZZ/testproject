@@ -105,14 +105,17 @@ export function useSharedFolder(slug: string | undefined, password?: string) {
  * веб вью по ссылке.svg"): validates a move against the real solution
  * server-side (POST /share/:slug/puzzles/:puzzleId/check-move) without ever
  * sending the solution to the client — but, unlike the authenticated
- * attempts/moves pipeline, nothing is persisted for a guest.
+ * attempts/moves pipeline, nothing is persisted for a guest, so the caller
+ * tracks its own position in the solution line and passes it as moveIndex.
+ * opponentMove is set (non-empty) when the move was correct but not the
+ * final ply — the caller auto-plays it and advances moveIndex by 2.
  */
 export function useCheckGuestMove(slug: string | undefined, password?: string) {
   return useMutation({
-    mutationFn: ({ puzzleId, move }: { puzzleId: string; move: string }) =>
-      api.post<{ correct: boolean }>(
+    mutationFn: ({ puzzleId, move, moveIndex }: { puzzleId: string; move: string; moveIndex: number }) =>
+      api.post<{ correct: boolean; opponentMove?: string }>(
         `/share/${slug}/puzzles/${puzzleId}/check-move`,
-        { move },
+        { move, moveIndex },
         { skipAuth: true, headers: password ? { "X-Share-Password": password } : undefined },
       ),
   });

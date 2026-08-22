@@ -59,13 +59,13 @@ func (r *Repository) GetFolderBySlug(ctx context.Context, slug string) (Folder, 
 	return scanFolder(row)
 }
 
-// GetPuzzleSolutionFirstMove returns the first solution move for puzzleID,
-// but ONLY when it's actually a member of folderID's items — the join is
-// what stops the guest move-check endpoint (see CheckGuestMove) from
-// working as a generic "give me any puzzle's answer" oracle by guessing
-// puzzle IDs; it can only ever resolve a puzzle that's really inside the
-// folder the caller already unlocked.
-func (r *Repository) GetPuzzleSolutionFirstMove(ctx context.Context, folderID, puzzleID uuid.UUID) (string, error) {
+// GetPuzzleSolutionLine returns the full solution_line for puzzleID, but
+// ONLY when it's actually a member of folderID's items — the join is what
+// stops the guest move-check endpoint (see CheckGuestMove) from working as
+// a generic "give me any puzzle's answer" oracle by guessing puzzle IDs; it
+// can only ever resolve a puzzle that's really inside the folder the caller
+// already unlocked.
+func (r *Repository) GetPuzzleSolutionLine(ctx context.Context, folderID, puzzleID uuid.UUID) ([]string, error) {
 	var line []string
 	err := r.pool.QueryRow(ctx, `
 		SELECT p.solution_line
@@ -74,15 +74,15 @@ func (r *Repository) GetPuzzleSolutionFirstMove(ctx context.Context, folderID, p
 		WHERE fi.folder_id = $1 AND p.id = $2`, folderID, puzzleID,
 	).Scan(&line)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", ErrNotFound
+		return nil, ErrNotFound
 	}
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if len(line) == 0 {
-		return "", ErrNotFound
+		return nil, ErrNotFound
 	}
-	return line[0], nil
+	return line, nil
 }
 
 // UpdateFolder patches name and/or visibility; a nil pointer leaves the

@@ -79,6 +79,8 @@
     "blackToMove": "Black to move",
     "retry": "Retry",
     "greatMove": "Great move!",
+    "correctContinue": "Correct! Find the continuation",
+    "opponentMoving": "Opponent is replying…",
     "wrongMove": "Wrong",
     "tryDifferently": "Try a different approach",
     "simplifyOffer": "There's a quicker way to get the idea through a similar, clearer puzzle",

@@ -1,17 +1,27 @@
 // Package generation implements the "AI Chess Puzzle Generation" domain
-// (spec.md User Story 2, FR-013–023). Per research.md ("AI generation /
-// chat / engine analysis") a real AI/chess-engine provider is deliberately
-// deferred — the user will supply a custom engine later — so this package
-// only ships a fixture-backed mock generator for now. The mock is built
-// behind the same request/response contract a real provider would use, so
-// swapping in a real implementation later touches only mock_generator.go.
+// (spec.md User Story 2, FR-013–023). Puzzles are sourced through the
+// Generator interface — APIGenerator (api_generator.go) calls the real
+// Neuratrap trainer recommendation API when PUZZLE_API_EMAIL/PASSWORD are
+// configured; otherwise Deps falls back to the original fixture-backed
+// MockGenerator (mock_generator.go), same self-gating pattern as SMTP_HOST.
 package generation
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/neuratop/backend/internal/puzzlemodel"
 )
+
+// Generator produces `count` puzzles for a generation request and persists
+// them as `puzzles` rows tied to generationID. Implemented by MockGenerator
+// (samples fixtures/puzzles.json) and APIGenerator (calls the external
+// puzzle-recommendation API) — see deps.go for which one gets wired up.
+type Generator interface {
+	Generate(ctx context.Context, ownerUserID, generationID uuid.UUID, inputMode, payload string, count int) ([]puzzlemodel.Puzzle, error)
+}
 
 // Input modes accepted for a generation request (FR-013).
 const (

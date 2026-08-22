@@ -6,8 +6,15 @@ interface ChessBoardViewProps {
   fen: string;
   orientation: "white" | "black";
   interactive: boolean;
-  /** Called with the SAN move string and the resulting FEN when a legal move is played. */
-  onMove: (san: string, resultFen: string) => void;
+  /**
+   * Called with the UCI move string ("e2e4", or "a7a8q" for a promotion —
+   * always to queen, there's no promotion-choice UI) and the resulting FEN
+   * when a legal move is played. UCI, not SAN: puzzles.solution_line is now
+   * UCI for every puzzle (fixtures and the external puzzle API alike), so
+   * the backend's move comparison (internal/puzzle/service.go SubmitMove)
+   * expects this wire format.
+   */
+  onMove: (move: string, resultFen: string) => void;
 }
 
 /**
@@ -42,7 +49,8 @@ export function ChessBoardView({ fen, orientation, interactive, onMove }: ChessB
               const game = new Chess(fen);
               const move = game.move({ from: sourceSquare, to: targetSquare, promotion: "q" });
               if (!move) return false;
-              onMove(move.san, game.fen());
+              const uci = move.from + move.to + (move.promotion ?? "");
+              onMove(uci, game.fen());
               return true;
             } catch {
               return false;

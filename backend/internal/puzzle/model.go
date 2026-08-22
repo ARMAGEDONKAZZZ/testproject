@@ -42,16 +42,32 @@ const (
 	SkillAxisDeltaRevealed = -2
 )
 
-// skillAxisColumns maps a puzzle's tag (fixtures/puzzles.json only ever
-// uses these four) to the skill_profiles column it should nudge.
-// "strategy" has no fixture tag of its own, so it is deliberately absent —
-// see BumpSkillAxis, which no-ops for any tag not in this map rather than
-// moving a column with fabricated numbers.
+// skillAxisColumns maps a puzzle's tag to the skill_profiles column it
+// should nudge. The first four entries are the original fixtures/puzzles.json
+// tags; the rest are tactical-motif tags the external puzzle API
+// (internal/generation/api_generator.go tagFor) assigns — every one of them
+// is a combinational/tactical pattern, so they all map to "tactics" too.
+// "strategy" has no tag of its own on either source, so it is deliberately
+// absent — see BumpSkillAxis, which no-ops for any tag not in this map
+// rather than moving a column with fabricated numbers.
 var skillAxisColumns = map[string]string{
-	"tactics":      "tactics",
-	"mate-in-1":    "calculation",
-	"opening-trap": "openings",
-	"endgame":      "endgames",
+	"tactics":           "tactics",
+	"mate-in-1":         "calculation",
+	"opening-trap":      "openings",
+	"endgame":           "endgames",
+	"sacrifice":         "tactics",
+	"fork":              "tactics",
+	"pin":               "tactics",
+	"skewer":            "tactics",
+	"discovered_attack": "tactics",
+	"double_attack":     "tactics",
+	"deflection":        "tactics",
+	"decoy":             "tactics",
+	"clearance":         "tactics",
+	"zugzwang":          "tactics",
+	"back_rank":         "tactics",
+	"hanging_piece":     "tactics",
+	"trapped_piece":     "tactics",
 }
 
 // SimplifyLimit mirrors the `puzzles.simplify_depth <= 3` check constraint
@@ -68,11 +84,16 @@ type MoveRecord struct {
 
 // SolveAttempt mirrors the solve_attempts table.
 type SolveAttempt struct {
-	ID               uuid.UUID
-	PuzzleID         uuid.UUID
-	UserID           uuid.UUID
-	Moves            []MoveRecord
-	Outcome          string
+	ID       uuid.UUID
+	PuzzleID uuid.UUID
+	UserID   uuid.UUID
+	Moves    []MoveRecord
+	Outcome  string
+	// SolutionIndex is how many plies into puzzle.SolutionLine this attempt
+	// has correctly progressed — SubmitMove compares the next submitted move
+	// against SolutionLine[SolutionIndex], not always index 0, so multi-ply
+	// sequences (solver move, forced opponent reply, solver move, ...) work.
+	SolutionIndex    int16
 	HintsUsed        int16
 	SolutionRevealed bool
 	SimplifyCount    int16

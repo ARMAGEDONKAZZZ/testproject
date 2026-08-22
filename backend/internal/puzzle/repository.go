@@ -106,7 +106,7 @@ func (r *Repository) InsertSimplifiedPuzzle(ctx context.Context, p puzzlemodel.P
 func scanAttempt(row pgx.Row) (SolveAttempt, error) {
 	var sa SolveAttempt
 	var movesRaw []byte
-	err := row.Scan(&sa.ID, &sa.PuzzleID, &sa.UserID, &movesRaw, &sa.Outcome,
+	err := row.Scan(&sa.ID, &sa.PuzzleID, &sa.UserID, &movesRaw, &sa.Outcome, &sa.SolutionIndex,
 		&sa.HintsUsed, &sa.SolutionRevealed, &sa.SimplifyCount, &sa.StartedAt, &sa.CompletedAt)
 	if err != nil {
 		return SolveAttempt{}, err
@@ -120,7 +120,7 @@ func scanAttempt(row pgx.Row) (SolveAttempt, error) {
 	return sa, nil
 }
 
-const attemptColumns = `id, puzzle_id, user_id, moves, outcome, hints_used, solution_revealed,
+const attemptColumns = `id, puzzle_id, user_id, moves, outcome, solution_index, hints_used, solution_revealed,
 	                     simplify_count, started_at, completed_at`
 
 // FindInProgressAttempt returns the caller's in_progress attempt on this
@@ -170,6 +170,15 @@ func (r *Repository) AppendMove(ctx context.Context, attemptID uuid.UUID, rec Mo
 	_, err = r.pool.Exec(ctx, `
 		UPDATE solve_attempts SET moves = moves || $2::jsonb WHERE id = $1`,
 		attemptID, string(payload))
+	return err
+}
+
+// AdvanceSolutionIndex moves an in-progress attempt's solution_index forward
+// past a correctly-played ply (and, when there's a forced opponent reply
+// next, past that too) — see Service.SubmitMove.
+func (r *Repository) AdvanceSolutionIndex(ctx context.Context, attemptID uuid.UUID, newIndex int16) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE solve_attempts SET solution_index = $2 WHERE id = $1`, attemptID, newIndex)
 	return err
 }
 

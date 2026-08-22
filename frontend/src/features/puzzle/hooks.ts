@@ -18,11 +18,21 @@ export function useStartAttempt(puzzleId: string) {
   });
 }
 
+/**
+ * opponentMove is set (non-empty) whenever the move was correct but not the
+ * last ply of a multi-move solution — solution_line can now be a full
+ * sequence (solver move, forced opponent reply, solver move, ...), not just
+ * one move, since puzzles can come from the external puzzle API. The caller
+ * is responsible for auto-playing it and then unlocking the board again.
+ */
 export function useSubmitMove(attemptId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (move: string) =>
-      api.post<{ correct: boolean; outcome: string }>(`/attempts/${attemptId}/moves`, { move }),
+      api.post<{ correct: boolean; outcome: string; opponentMove?: string }>(
+        `/attempts/${attemptId}/moves`,
+        { move },
+      ),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["attempt", attemptId] });
     },

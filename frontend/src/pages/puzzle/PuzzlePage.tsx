@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Chess } from "chess.js";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { Pill } from "@/components/Pill";
@@ -35,7 +36,15 @@ import { useFolders, useAddToFolders } from "@/features/folders/hooks";
 import { useMe } from "@/features/profile/hooks";
 import { useRegeneratePuzzle, useGeneration } from "@/features/generation/hooks";
 
-type MoveOutcome = "idle" | "correct" | "incorrect";
+// "opponent-moving": a correct move that wasn't the final ply of a
+// multi-move solution (see useSubmitMove) — board stays locked while the
+// forced opponent reply auto-plays, then flips back to "idle".
+type MoveOutcome = "idle" | "correct" | "incorrect" | "opponent-moving";
+
+/** Parses a UCI move like "e7e8q" into {from, to, promotion}. */
+function parseUci(uci: string): { from: string; to: string; promotion?: string } {
+  return { from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci.length > 4 ? uci.slice(4) : undefined };
+}
 
 export default function PuzzlePage() {
   const { t } = useTranslation();
@@ -163,22 +172,47 @@ export default function PuzzlePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [regenGeneration?.status]);
 
-  async function handleMove(san: string, resultFen: string) {
+  async function handleMove(move: string, resultFen: string) {
     if (!attemptId) return;
     try {
-      const res = await submitMove.mutateAsync(san);
-      if (res.correct) {
-        setOutcome("correct");
-        setCurrentFen(resultFen);
-        if (isTraining && originalPuzzleId && originalPuzzleId !== currentPuzzleId) {
-          setMascotBubble(t("selfEducation.returnMessage"));
-        } else if (isTraining && resumedFromSimplify) {
-          setMascotBubble(t("selfEducation.finalMessage"));
-        }
-      } else {
+      const res = await submitMove.mutateAsync(move);
+      if (!res.correct) {
         setOutcome("incorrect");
         // Snap back to the puzzle's starting position — one wrong move ends the attempt line.
         setCurrentFen(puzzle?.fen ?? currentFen);
+        return;
+      }
+
+      setCurrentFen(resultFen);
+
+      if (res.opponentMove) {
+        // Not the final ply — lock the board, auto-play the forced reply
+        // after a short pause so the player can register their own move
+        // landing first, then unlock for the next one.
+        setOutcome("opponent-moving");
+        const opponentMove = res.opponentMove;
+        setTimeout(() => {
+          setCurrentFen((fen) => {
+            if (!fen) return fen;
+            try {
+              const game = new Chess(fen);
+              const { from, to, promotion } = parseUci(opponentMove);
+              const move = game.move({ from, to, promotion });
+              return move ? game.fen() : fen;
+            } catch {
+              return fen;
+            }
+          });
+          setOutcome("idle");
+        }, 600);
+        return;
+      }
+
+      setOutcome("correct");
+      if (isTraining && originalPuzzleId && originalPuzzleId !== currentPuzzleId) {
+        setMascotBubble(t("selfEducation.returnMessage"));
+      } else if (isTraining && resumedFromSimplify) {
+        setMascotBubble(t("selfEducation.finalMessage"));
       }
     } catch {
       toast.error(t("common.errorGeneric"));
@@ -312,7 +346,7 @@ export default function PuzzlePage() {
 
           <Card
             className={
-              outcome === "correct"
+              outcome === "correct" || outcome === "opponent-moving"
                 ? "border-accent-green"
                 : outcome === "incorrect"
                   ? "border-danger"
@@ -324,7 +358,7 @@ export default function PuzzlePage() {
                 fen={currentFen}
                 orientation={orientation}
                 interactive={outcome === "idle" && !regenerating}
-                onMove={(san, resultFen) => void handleMove(san, resultFen)}
+                onMove={(move, resultFen) => void handleMove(move, resultFen)}
               />
               {regenerating && <RegenerateOverlay />}
             </div>
@@ -352,6 +386,12 @@ export default function PuzzlePage() {
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
+              </div>
+            )}
+
+            {outcome === "opponent-moving" && (
+              <div className="mt-4 rounded-xl bg-accent-green/10 p-3 text-center text-accent-green">
+                <p>{t("puzzle.opponentMoving")}</p>
               </div>
             )}
 

@@ -154,10 +154,6 @@ const puzzleColumns = `id, owner_user_id, generation_id, fen, side_to_move, obje
 // a "Упростить задачу" chain — the mock generator itself always passes
 // (nil, 0) since it only ever creates fresh top-level puzzles.
 func (r *Repository) CreatePuzzleFromFixture(ctx context.Context, ownerUserID uuid.UUID, generationID *uuid.UUID, fx fixtures.Puzzle, simplifiedFromID *uuid.UUID, simplifyDepth int16) (puzzlemodel.Puzzle, error) {
-	evalJSON, err := json.Marshal(fx.MockEval)
-	if err != nil {
-		return puzzlemodel.Puzzle{}, err
-	}
 	p := puzzlemodel.Puzzle{
 		OwnerUserID:      ownerUserID,
 		GenerationID:     generationID,
@@ -171,6 +167,23 @@ func (r *Repository) CreatePuzzleFromFixture(ctx context.Context, ownerUserID uu
 		SimplifiedFromID: simplifiedFromID,
 		SimplifyDepth:    simplifyDepth,
 		IsVerifiedLegal:  true,
+		MockEval: &puzzlemodel.MockEval{
+			Evaluation: fx.MockEval.Evaluation,
+			BestMove:   fx.MockEval.BestMove,
+			Depth:      fx.MockEval.Depth,
+		},
+	}
+	return r.CreatePuzzle(ctx, p)
+}
+
+// CreatePuzzle inserts one `puzzles` row from an already-fully-populated
+// puzzlemodel.Puzzle — shared by CreatePuzzleFromFixture (mock generator)
+// and the real-API generator (see api_generator.go), which builds this
+// struct itself from an external recommendation rather than a fixture.
+func (r *Repository) CreatePuzzle(ctx context.Context, p puzzlemodel.Puzzle) (puzzlemodel.Puzzle, error) {
+	evalJSON, err := json.Marshal(p.MockEval)
+	if err != nil {
+		return puzzlemodel.Puzzle{}, err
 	}
 	err = r.pool.QueryRow(ctx, `
 		INSERT INTO puzzles (owner_user_id, generation_id, fen, side_to_move, objective, solution_line, tag,
@@ -182,11 +195,6 @@ func (r *Repository) CreatePuzzleFromFixture(ctx context.Context, ownerUserID uu
 	).Scan(&p.ID, &p.CreatedAt)
 	if err != nil {
 		return puzzlemodel.Puzzle{}, err
-	}
-	p.MockEval = &puzzlemodel.MockEval{
-		Evaluation: fx.MockEval.Evaluation,
-		BestMove:   fx.MockEval.BestMove,
-		Depth:      fx.MockEval.Depth,
 	}
 	return p, nil
 }
