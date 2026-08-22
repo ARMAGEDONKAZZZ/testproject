@@ -13,6 +13,10 @@ WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ .
+# frontend/vite.config.ts and tsconfig.app.json alias "board-view" to
+# ../board-view/src (a sibling package, see board-view/) — only the source
+# is needed here, board-view has zero runtime deps of its own.
+COPY board-view/src /src/board-view/src
 RUN npm run build
 
 # --- go build stage -------------------------------------------------------
