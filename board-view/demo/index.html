@@ -1,0 +1,66 @@
+<!-- Copyright (c) 2026 Neuratop. All rights reserved. -->
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>board-view demo</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 520px;
+        margin: 2rem auto;
+        color: #222;
+      }
+      #board {
+        width: 100%;
+        margin-bottom: 1rem;
+      }
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .row {
+        display: flex;
+        gap: 0.5rem;
+      }
+      input[type="text"] {
+        flex: 1;
+        font-family: monospace;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 0.5rem;
+        overflow-x: auto;
+      }
+      /* Demo-only highlight color — this is HOST css, not part of board-view;
+         proves colors come from the tag, never hardcoded in the library. */
+      .bv-highlight--demo {
+        background: rgba(255, 214, 0, 0.55);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>board-view — phase 3 demo</h1>
+    <p>Static rendering only: no dragging/clicking on the board yet (that's phases 5-6). Every control below just calls the public API.</p>
+
+    <div id="board"></div>
+
+    <div class="controls">
+      <div class="row">
+        <button id="flip">Flip orientation</button>
+        <button id="highlight-e4">Highlight e4</button>
+        <button id="clear-highlights">Clear highlights</button>
+        <button id="log-position">getPosition() →</button>
+      </div>
+      <form id="fen-form" class="row">
+        <input id="fen-input" type="text" placeholder="Paste a FEN and press Enter" />
+        <button type="submit">Load FEN</button>
+      </form>
+      <pre id="position-output"></pre>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

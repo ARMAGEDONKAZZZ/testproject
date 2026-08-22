@@ -1,0 +1,19 @@
+{
+  "name": "board-view",
+  "version": "0.0.1",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "description": "Framework-agnostic chess board renderer and input model. No chess rules inside.",
+  "scripts": {
+    "dev": "vite demo --port 5174",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  }
+}

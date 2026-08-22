@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
+      'board-view': path.resolve(import.meta.dirname, '../board-view/src'),
     },
   },
   server: {

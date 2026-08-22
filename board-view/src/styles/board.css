@@ -1,0 +1,145 @@
+/* Copyright (c) 2026 Neuratop. All rights reserved. */
+
+/*
+ * Structural + default-theme styles. Every color/size a consumer might
+ * want to override is a --bv-* custom property on .bv-root, so swapping a
+ * theme or a piece set is one class added to the root element — no JS, no
+ * rebuild. Positioning is transform-only (never top/left) and sized in
+ * percent, so a container resize costs zero JavaScript: the browser alone
+ * recomputes every square/piece/highlight position and the Unicode
+ * fallback glyph's own size (via container query units on .bv-root).
+ */
+
+.bv-root {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  container-type: inline-size;
+
+  --bv-square-light: #f0d9b5;
+  --bv-square-dark: #b58863;
+  --bv-piece-color-w: #ffffff;
+  --bv-piece-color-b: #1a1a1a;
+  --bv-piece-stroke: rgba(0, 0, 0, 0.35);
+  --bv-coordinate-color: rgba(0, 0, 0, 0.55);
+  --bv-coordinate-size: 2.2cqi; /* small corner label, ~18% of a square */
+}
+
+.bv-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.bv-layer--board {
+  z-index: 0;
+}
+
+.bv-layer--highlights {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.bv-layer--pieces {
+  z-index: 2;
+}
+
+.bv-layer--overlays {
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.bv-layer--dragged {
+  z-index: 4;
+  pointer-events: none; /* setPointerCapture (phase 5) keeps input working regardless */
+}
+
+.bv-square,
+.bv-piece,
+.bv-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 12.5%;
+  height: 12.5%;
+}
+
+.bv-square--light {
+  background: var(--bv-square-light);
+}
+
+.bv-square--dark {
+  background: var(--bv-square-dark);
+}
+
+/* Coordinates: CSS pseudo-elements off a data attribute, not extra DOM
+   nodes. positionSquares() (layers.ts) sets data-file-label only on the
+   visually-bottom row and data-rank-label only on the visually-left
+   column for the CURRENT orientation, so labels stay on the correct edge
+   after a flip with no extra markup. Visibility is a single class on
+   .bv-root, set once from BoardOptions.showCoordinates. */
+.bv-square[data-file-label]::after,
+.bv-square[data-rank-label]::before {
+  content: none;
+  position: absolute;
+  font-size: var(--bv-coordinate-size);
+  line-height: 1;
+  color: var(--bv-coordinate-color);
+  pointer-events: none;
+}
+
+.bv-root.bv-show-coordinates .bv-square[data-file-label]::after {
+  content: attr(data-file-label);
+  right: 6%;
+  bottom: 2%;
+}
+
+.bv-root.bv-show-coordinates .bv-square[data-rank-label]::before {
+  content: attr(data-rank-label);
+  left: 6%;
+  top: 2%;
+}
+
+/* Unicode fallback glyph (pieces-fallback.ts) — dev placeholder only. A
+   consumer replaces this visually via .bv-piece.bv-{color}{kind}, e.g.
+   with a background-image or a piece @font-face mapped to the same code
+   points; nothing here is a shipped graphic asset. */
+.bv-piece {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 9.75cqi = 78% of a piece's own 12.5%-of-board width. Deliberately NOT
+     container-type on .bv-piece itself: a cq unit used on a property of
+     the container element it's declared on skips that element and
+     resolves against the next ancestor container (.bv-root) instead — so
+     this is expressed as a fraction of the board, not of the piece. */
+  font-size: 9.75cqi;
+  line-height: 1;
+  user-select: none;
+}
+
+.bv-piece.bv-wk,
+.bv-piece.bv-wq,
+.bv-piece.bv-wr,
+.bv-piece.bv-wb,
+.bv-piece.bv-wn,
+.bv-piece.bv-wp {
+  color: var(--bv-piece-color-w);
+  -webkit-text-stroke: 1.5cqi var(--bv-piece-stroke);
+}
+
+.bv-piece.bv-bk,
+.bv-piece.bv-bq,
+.bv-piece.bv-br,
+.bv-piece.bv-bb,
+.bv-piece.bv-bn,
+.bv-piece.bv-bp {
+  color: var(--bv-piece-color-b);
+}
+
+/* No default color: the tag-specific class (bv-highlight--{tag}) is
+   entirely the host's own CSS, per spec — nothing hardcoded here. */
+.bv-highlight {
+  pointer-events: none;
+}
